@@ -141,6 +141,17 @@ const AnalysisResultsPage: React.FC = () => {
     }
   }
 
+  const toggleFullscreen = () => {
+    const videoContainer = videoRef.current?.parentElement
+    if (videoContainer) {
+      if (document.fullscreenElement) {
+        document.exitFullscreen()
+      } else {
+        videoContainer.requestFullscreen()
+      }
+    }
+  }
+
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60)
     const secs = Math.floor(seconds % 60)
@@ -311,7 +322,7 @@ const AnalysisResultsPage: React.FC = () => {
                           {formatTime(currentTime)} / {formatTime(duration || markerDuration)}
                         </div>
 
-                        <button className="control-btn ml-auto">
+                        <button className="control-btn ml-auto" onClick={toggleFullscreen}>
                           <Maximize size={16} />
                         </button>
                       </div>
