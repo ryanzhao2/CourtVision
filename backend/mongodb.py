@@ -14,14 +14,14 @@ uri = f"mongodb+srv://adityasen120:{password}@clustermain.cswnpek.mongodb.net/?r
 # Connect to MongoDB
 client = MongoClient(uri)
 
-# Access database and collection
+""" Player DB """
 db = client["basketball_database"]
 collection = db["basketball_player_stats"]
 
-db_account = client["accounts_database"]
-collection_account = db_account["account_collection"]
-
 def create_player(name, team, points=0, assists=0, rebounds=0, fouls=0):
+    if users_collection.find_one({"name": name}):
+        return None
+    
     player = {
         "name": name,
         "team": team,
@@ -37,10 +37,8 @@ def update_player(name, updates):
         {"name": name},
         {"$set": updates}
     )
-    if result.modified_count > 0:
-        print(f"Player '{name}' updated successfully.")
-    else:
-        print(f"No updates made (player may not exist or values are the same).")
+
+    return result.modified_count
 
 def get_player(name):
     player = collection.find_one({"name": name})
@@ -57,4 +55,49 @@ def get_all_players():
 def delete_player(name):
     result = collection.delete_one({"name": name})
 
+    return result.deleted_count
+
+
+""" User Account DB """
+db = client["UserDB"]
+users_collection = db["users"]
+
+def create_user(first_name, last_name, email, password):
+    if users_collection.find_one({"email": email}):
+        return None
+
+    user = {
+        "first_name": first_name,
+        "last_name": last_name,
+        "email": email,
+        "password": password  # You can hash this later
+    }
+    result = users_collection.insert_one(user)
+
+    return result.inserted_id
+
+def update_user(email, updates):
+    result = users_collection.update_one(
+        {"email": email},
+        {"$set": updates}
+    )
+    
+    return result.modified_count
+
+def get_user(email):
+    user = users_collection.find_one({"email": email})
+
+    if user:
+        return user
+    else:
+        return None
+    
+def get_all_users():
+    users = list(users_collection.find())
+
+    return users
+
+def delete_user(email):
+    result = users_collection.delete_one({"email": email})
+    
     return result.deleted_count
