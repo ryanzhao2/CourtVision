@@ -35,7 +35,7 @@ interface AuthProviderProps {
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(localStorage.getItem('token'));
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true); // Start with loading true
   const [error, setError] = useState<string | null>(null);
 
   // Check if token is valid on app start
@@ -52,24 +52,34 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             body: JSON.stringify({ token: storedToken }),
           });
 
-          const data = await response.json();
-
-          if (data.valid) {
-            setUser(data.user);
-            setToken(storedToken);
+          if (response.ok) {
+            const data = await response.json();
+            if (data.valid) {
+              setUser(data.user);
+              setToken(storedToken);
+              console.log('Token verified successfully');
+            } else {
+              console.log('Token invalid, clearing auth state');
+              localStorage.removeItem('token');
+              setToken(null);
+              setUser(null);
+            }
           } else {
-            // Token is invalid, remove it
-            localStorage.removeItem('token');
-            setToken(null);
-            setUser(null);
+            console.log('Token verification failed with status:', response.status);
+            // Don't clear token on server errors, just keep the current state
+            setToken(storedToken);
           }
         } catch (err) {
           console.error('Token verification failed:', err);
-          localStorage.removeItem('token');
-          setToken(null);
-          setUser(null);
+          // On network errors, keep the token and don't log out
+          // This prevents logout when backend is temporarily unavailable
+          setToken(storedToken);
+          console.log('Network error during token verification, keeping token');
         }
+      } else {
+        console.log('No token found in localStorage');
       }
+      setIsLoading(false);
     };
 
     verifyToken();
@@ -94,6 +104,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         setUser(data.user);
         setToken(data.token);
         localStorage.setItem('token', data.token);
+        console.log('Login successful');
         return true;
       } else {
         setError(data.error || 'Login failed');
@@ -140,6 +151,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   const logout = async () => {
+    console.log('Logout called');
     if (token) {
       try {
         // Call logout endpoint
@@ -159,6 +171,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setUser(null);
     setToken(null);
     localStorage.removeItem('token');
+    console.log('Logout completed');
   };
 
   const value: AuthContextType = {

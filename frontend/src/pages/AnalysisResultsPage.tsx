@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useState, useEffect } from "react"
+import { useState, useRef, useEffect } from "react"
 import { Link } from "react-router-dom"
 import {
   Play,
@@ -29,9 +29,13 @@ interface AnalysisEvent {
 const AnalysisResultsPage: React.FC = () => {
   const [isPlaying, setIsPlaying] = useState(false)
   const [currentTime, setCurrentTime] = useState(0)
-  const [duration] = useState(930) // 15:30 in seconds
+  const [duration, setDuration] = useState(0)
   const [volume, setVolume] = useState(50)
   const [hoveredEvent, setHoveredEvent] = useState<AnalysisEvent | null>(null)
+  const videoRef = useRef<HTMLVideoElement>(null)
+  
+  // Change this to your video file name (e.g., "my-video.mp4", "basketball-game.webm", etc.)
+  const videoSource = "test.mp4"
 
   const analysisEvents: AnalysisEvent[] = [
     {
@@ -101,19 +105,37 @@ const AnalysisResultsPage: React.FC = () => {
   ]
 
   const togglePlayPause = () => {
-    setIsPlaying(!isPlaying)
+    if (videoRef.current) {
+      if (isPlaying) {
+        videoRef.current.pause()
+      } else {
+        videoRef.current.play()
+      }
+      setIsPlaying(!isPlaying)
+    }
   }
 
   const handleTimeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setCurrentTime(Number.parseInt(e.target.value))
+    const newTime = Number.parseInt(e.target.value)
+    setCurrentTime(newTime)
+    if (videoRef.current) {
+      videoRef.current.currentTime = newTime
+    }
   }
 
   const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setVolume(Number.parseInt(e.target.value))
+    const newVolume = Number.parseInt(e.target.value)
+    setVolume(newVolume)
+    if (videoRef.current) {
+      videoRef.current.volume = newVolume / 100
+    }
   }
 
   const jumpToEvent = (timestamp: number) => {
     setCurrentTime(timestamp)
+    if (videoRef.current) {
+      videoRef.current.currentTime = timestamp
+    }
   }
 
   const formatTime = (seconds: number) => {
@@ -133,22 +155,46 @@ const AnalysisResultsPage: React.FC = () => {
     }
   }
 
-  // Simulate video playback
+  // Video event handlers
   useEffect(() => {
-    let interval: ReturnType<typeof setInterval>
-    if (isPlaying) {
-      interval = setInterval(() => {
-        setCurrentTime((prev) => {
-          if (prev >= duration) {
-            setIsPlaying(false)
-            return duration
-          }
-          return prev + 1
-        })
-      }, 1000)
+    const video = videoRef.current
+    if (!video) return
+
+    const handleLoadedMetadata = () => {
+      setDuration(video.duration)
     }
-    return () => clearInterval(interval)
-  }, [isPlaying, duration])
+
+    const handleTimeUpdate = () => {
+      setCurrentTime(video.currentTime)
+    }
+
+    const handlePlay = () => {
+      setIsPlaying(true)
+    }
+
+    const handlePause = () => {
+      setIsPlaying(false)
+    }
+
+    const handleEnded = () => {
+      setIsPlaying(false)
+      setCurrentTime(0)
+    }
+
+    video.addEventListener('loadedmetadata', handleLoadedMetadata)
+    video.addEventListener('timeupdate', handleTimeUpdate)
+    video.addEventListener('play', handlePlay)
+    video.addEventListener('pause', handlePause)
+    video.addEventListener('ended', handleEnded)
+
+    return () => {
+      video.removeEventListener('loadedmetadata', handleLoadedMetadata)
+      video.removeEventListener('timeupdate', handleTimeUpdate)
+      video.removeEventListener('play', handlePlay)
+      video.removeEventListener('pause', handlePause)
+      video.removeEventListener('ended', handleEnded)
+    }
+  }, [])
 
   return (
     <div className="results-page">
@@ -178,11 +224,19 @@ const AnalysisResultsPage: React.FC = () => {
               <div className="video-player-card">
                 <div className="video-player">
                   <div className="video-container">
-                    <img
-                      src="https://images.unsplash.com/photo-1546519638-68e109498ffc?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&h=450"
-                      alt="Basketball game analysis"
+                    <video
+                      ref={videoRef}
                       className="video-placeholder"
-                    />
+                      controls={false}
+                      preload="metadata"
+                    >
+                      {/* Change the videoSource variable above to play your own video */}
+                      <source src={`/api/video/${videoSource}`} type="video/mp4" />
+                      {/* Fallback for different video formats */}
+                      <source src={`/api/video/${videoSource.replace('.mp4', '.webm')}`} type="video/webm" />
+                      <source src={`/api/video/${videoSource.replace('.mp4', '.ogg')}`} type="video/ogg" />
+                      Your browser does not support the video tag.
+                    </video>
 
                     {/* Video Controls Overlay */}
                     <div className="video-controls-overlay">
@@ -202,7 +256,9 @@ const AnalysisResultsPage: React.FC = () => {
                           <div
                             key={event.id}
                             className={`event-marker ${event.severity}`}
-                            style={{ left: `${(event.timestamp / duration) * 100}%` }}
+                            style={{
+                              left: `${(event.timestamp / duration) * 100}%`,
+                            }}
                             onMouseEnter={() => setHoveredEvent(event)}
                             onMouseLeave={() => setHoveredEvent(null)}
                             onClick={() => jumpToEvent(event.timestamp)}
