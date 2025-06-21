@@ -4,18 +4,21 @@ import type React from "react"
 import { useState } from "react"
 import { Link, useNavigate } from "react-router-dom"
 import { BarChart3 } from "lucide-react"
+import { useAuth } from "../context/AuthContext"
 
 const LoginPage: React.FC = () => {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
+  const { login, isLoading, error } = useAuth()
   const navigate = useNavigate()
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    // Handle login logic here
-    console.log("Login attempt:", { email, password })
-    // Simulate successful login
-    navigate("/dashboard")
+    
+    const success = await login(email, password)
+    if (success) {
+      navigate('/dashboard')
+    }
   }
 
   return (
@@ -65,8 +68,18 @@ const LoginPage: React.FC = () => {
               </Link>
             </div>
 
-            <button type="submit" className="btn btn-primary btn-full">
-              Sign In
+            {error && (
+              <div className="error-message">
+                {error}
+              </div>
+            )}
+
+            <button 
+              type="submit" 
+              className="btn btn-primary btn-full"
+              disabled={isLoading}
+            >
+              {isLoading ? 'Signing In...' : 'Sign In'}
             </button>
 
             <div className="auth-switch">

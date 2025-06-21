@@ -4,6 +4,7 @@ import type React from "react"
 import { useState } from "react"
 import { Link, useNavigate } from "react-router-dom"
 import { BarChart3 } from "lucide-react"
+import { useAuth } from "../context/AuthContext"
 
 const SignupPage: React.FC = () => {
   const [formData, setFormData] = useState({
@@ -14,14 +15,21 @@ const SignupPage: React.FC = () => {
     confirmPassword: "",
     agreeToTerms: false,
   })
+  const { signup, isLoading, error } = useAuth()
   const navigate = useNavigate()
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    // Handle signup logic here
-    console.log("Signup attempt:", formData)
-    // Simulate successful signup
-    navigate("/dashboard")
+    
+    // Validate passwords match
+    if (formData.password !== formData.confirmPassword) {
+      return
+    }
+
+    const success = await signup(formData.firstName, formData.lastName, formData.email, formData.password)
+    if (success) {
+      navigate('/dashboard')
+    }
   }
 
   const handleInputChange = (field: string, value: string | boolean) => {
@@ -116,8 +124,18 @@ const SignupPage: React.FC = () => {
               </label>
             </div>
 
-            <button type="submit" className="btn btn-primary btn-full" disabled={!formData.agreeToTerms}>
-              Create Account
+            {error && (
+              <div className="error-message">
+                {error}
+              </div>
+            )}
+
+            <button 
+              type="submit" 
+              className="btn btn-primary btn-full" 
+              disabled={!formData.agreeToTerms || isLoading}
+            >
+              {isLoading ? 'Creating Account...' : 'Create Account'}
             </button>
 
             <div className="auth-switch">
