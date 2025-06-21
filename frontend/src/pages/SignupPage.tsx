@@ -14,14 +14,52 @@ const SignupPage: React.FC = () => {
     confirmPassword: "",
     agreeToTerms: false,
   })
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState("")
   const navigate = useNavigate()
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    // Handle signup logic here
-    console.log("Signup attempt:", formData)
-    // Simulate successful signup
-    navigate("/dashboard")
+    setIsLoading(true)
+    setError("")
+
+    // Validate passwords match
+    if (formData.password !== formData.confirmPassword) {
+      setError("Passwords do not match")
+      setIsLoading(false)
+      return
+    }
+
+    try {
+      const response = await fetch('/signup', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          email: formData.email,
+          password: formData.password,
+        }),
+      })
+
+      const data = await response.json()
+
+      if (response.ok) {
+        // Successful signup
+        console.log('Signup successful:', data)
+        navigate('/dashboard')
+      } else {
+        // Handle error response
+        setError(data.message || 'Signup failed. Please try again.')
+      }
+    } catch (err) {
+      console.error('Signup error:', err)
+      setError('Network error. Please check your connection and try again.')
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   const handleInputChange = (field: string, value: string | boolean) => {
@@ -116,8 +154,18 @@ const SignupPage: React.FC = () => {
               </label>
             </div>
 
-            <button type="submit" className="btn btn-primary btn-full" disabled={!formData.agreeToTerms}>
-              Create Account
+            {error && (
+              <div className="error-message">
+                {error}
+              </div>
+            )}
+
+            <button 
+              type="submit" 
+              className="btn btn-primary btn-full" 
+              disabled={!formData.agreeToTerms || isLoading}
+            >
+              {isLoading ? 'Creating Account...' : 'Create Account'}
             </button>
 
             <div className="auth-switch">
