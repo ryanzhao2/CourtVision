@@ -104,6 +104,9 @@ const AnalysisResultsPage: React.FC = () => {
     },
   ]
 
+  // Calculate a stable duration for markers that doesn't change when video loads
+  const markerDuration = Math.max(930, Math.max(...analysisEvents.map(e => e.timestamp)) + 60) // Use 930 seconds (15:30) or max event time + 60s
+
   const togglePlayPause = () => {
     if (videoRef.current) {
       if (isPlaying) {
@@ -245,7 +248,7 @@ const AnalysisResultsPage: React.FC = () => {
                         <input
                           type="range"
                           min="0"
-                          max={duration}
+                          max={duration || markerDuration}
                           value={currentTime}
                           onChange={handleTimeChange}
                           className="progress-slider"
@@ -257,7 +260,7 @@ const AnalysisResultsPage: React.FC = () => {
                             key={event.id}
                             className={`event-marker ${event.severity}`}
                             style={{
-                              left: `${(event.timestamp / duration) * 100}%`,
+                              left: `${(event.timestamp / markerDuration) * 100}%`,
                             }}
                             onMouseEnter={() => setHoveredEvent(event)}
                             onMouseLeave={() => setHoveredEvent(null)}
@@ -305,7 +308,7 @@ const AnalysisResultsPage: React.FC = () => {
                         </div>
 
                         <div className="time-display">
-                          {formatTime(currentTime)} / {formatTime(duration)}
+                          {formatTime(currentTime)} / {formatTime(duration || markerDuration)}
                         </div>
 
                         <button className="control-btn ml-auto">
