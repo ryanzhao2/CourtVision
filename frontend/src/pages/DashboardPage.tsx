@@ -40,14 +40,6 @@ const DashboardPage = () => {
         </Link>
 
         <div className="header-actions">
-          <button className="btn btn-ghost">
-            <History size={16} />
-            History
-          </button>
-          <button className="btn btn-ghost">
-            <Settings size={16} />
-            Settings
-          </button>
           <div className="user-info">
             <User size={16} />
             <span>{user.firstName} {user.lastName}</span>
@@ -60,26 +52,6 @@ const DashboardPage = () => {
 
       <main className="dashboard-main">
         <div className="container">
-          <div className="user-info">
-            <h2>Your Profile</h2>
-            <div className="profile-card">
-              <p><strong>Name:</strong> {user.firstName} {user.lastName}</p>
-              <p><strong>Email:</strong> {user.email}</p>
-            </div>
-          </div>
-
-          <div className="dashboard-actions">
-            <h2>Quick Actions</h2>
-            <div className="action-buttons">
-              <Link to="/analyze/webcam" className="btn btn-primary">
-                Start Webcam Analysis
-              </Link>
-              <Link to="/analyze/upload" className="btn btn-primary">
-                Upload Video for Analysis
-              </Link>
-            </div>
-          </div>
-
           <div className="dashboard-welcome">
             <h1>Welcome back, {user.firstName}!</h1>
             <p>Choose how you'd like to analyze your basketball gameplay today.</p>
@@ -100,7 +72,6 @@ const DashboardPage = () => {
               </div>
               <div className="analysis-card-content">
                 <div className="feature-badge live-badge">
-                  <div className="pulse-dot"></div>
                   <span>Real-time processing</span>
                   <small>Get instant feedback as you play</small>
                 </div>
@@ -124,61 +95,12 @@ const DashboardPage = () => {
               </div>
               <div className="analysis-card-content">
                 <div className="feature-badge upload-badge">
-                  <div className="feature-dot"></div>
                   <span>Detailed analysis</span>
                   <small>Interactive timeline with insights</small>
                 </div>
                 <Link to="/analyze/upload" className="btn btn-secondary btn-full btn-large">
                   Upload Video
                 </Link>
-              </div>
-            </div>
-          </div>
-
-          {/* Recent Activity */}
-          <div className="recent-activity">
-            <h2>Recent Activity</h2>
-            <div className="activity-grid">
-              <div className="activity-card">
-                <div className="activity-header">
-                  <h4>Practice Session #1</h4>
-                  <span className="activity-time">2 hours ago</span>
-                </div>
-                <div className="activity-content">
-                  <p>Live webcam analysis</p>
-                  <div className="activity-stats">
-                    <span>Duration: 45 min</span>
-                    <span>Events: 23</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="activity-card">
-                <div className="activity-header">
-                  <h4>Game Footage</h4>
-                  <span className="activity-time">1 day ago</span>
-                </div>
-                <div className="activity-content">
-                  <p>Video upload analysis</p>
-                  <div className="activity-stats">
-                    <span>Duration: 1h 20min</span>
-                    <span>Events: 47</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="activity-card">
-                <div className="activity-header">
-                  <h4>Training Drill</h4>
-                  <span className="activity-time">3 days ago</span>
-                </div>
-                <div className="activity-content">
-                  <p>Live webcam analysis</p>
-                  <div className="activity-stats">
-                    <span>Duration: 30 min</span>
-                    <span>Events: 15</span>
-                  </div>
-                </div>
               </div>
             </div>
           </div>
