@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 from werkzeug.security import generate_password_hash, check_password_hash
 from mongodb import create_user, get_user
@@ -177,6 +177,16 @@ def verify_token():
         return jsonify({"valid": False, "error": "Token has expired"}), 401
     except jwt.InvalidTokenError:
         return jsonify({"valid": False, "error": "Invalid token"}), 401
+
+@app.route("/api/video/<filename>", methods=["GET"])
+def serve_video(filename):
+    """Serve video files from the backend directory"""
+    try:
+        # Get the directory where this script is located
+        backend_dir = os.path.dirname(os.path.abspath(__file__))
+        return send_from_directory(backend_dir, filename)
+    except FileNotFoundError:
+        return jsonify({"error": "Video file not found"}), 404
 
 if __name__ == "__main__":
     app.run(debug=True)
