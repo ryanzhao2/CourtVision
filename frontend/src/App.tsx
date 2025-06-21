@@ -1,4 +1,6 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom"
+import { AuthProvider } from "./context/AuthContext"
+import ProtectedRoute from "./components/ProtectedRoute"
 import HomePage from "./pages/HomePage.tsx"
 import LoginPage from "./pages/LoginPage"
 import SignupPage from "./pages/SignupPage"
@@ -10,19 +12,37 @@ import "./App.css"
 
 function App() {
   return (
-    <Router>
-      <div className="App">
-        <Routes>
-          <Route path="/" element={<HomePage />} />
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/signup" element={<SignupPage />} />
-          <Route path="/dashboard" element={<DashboardPage />} />
-          <Route path="/analyze/webcam" element={<WebcamAnalysisPage />} />
-          <Route path="/analyze/upload" element={<VideoUploadPage />} />
-          <Route path="/analyze/results" element={<AnalysisResultsPage />} />
-        </Routes>
-      </div>
-    </Router>
+    <AuthProvider>
+      <Router>
+        <div className="App">
+          <Routes>
+            <Route path="/" element={<HomePage />} />
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/signup" element={<SignupPage />} />
+            <Route path="/dashboard" element={
+              <ProtectedRoute>
+                <DashboardPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/analyze/webcam" element={
+              <ProtectedRoute>
+                <WebcamAnalysisPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/analyze/upload" element={
+              <ProtectedRoute>
+                <VideoUploadPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/analyze/results" element={
+              <ProtectedRoute>
+                <AnalysisResultsPage />
+              </ProtectedRoute>
+            } />
+          </Routes>
+        </div>
+      </Router>
+    </AuthProvider>
   )
 }
 

@@ -4,9 +4,31 @@ import React from "react"
 import { useState } from "react"
 import { Link } from "react-router-dom"
 import { Camera, Upload, BarChart3, User, LogOut, History, Settings } from "lucide-react"
+import { useAuth } from "../context/AuthContext"
+import { useNavigate } from "react-router-dom"
 
 const DashboardPage = () => {
-  const [user] = useState({ name: "John Doe", email: "john@example.com" })
+  const { user, logout } = useAuth()
+  const navigate = useNavigate()
+
+  const handleLogout = () => {
+    logout()
+    navigate('/')
+  }
+
+  if (!user) {
+    return (
+      <div className="dashboard-page">
+        <div className="container">
+          <h1>Access Denied</h1>
+          <p>Please log in to access the dashboard.</p>
+          <Link to="/login" className="btn btn-primary">
+            Go to Login
+          </Link>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="dashboard-page">
@@ -28,9 +50,9 @@ const DashboardPage = () => {
           </button>
           <div className="user-info">
             <User size={16} />
-            <span>{user.name}</span>
+            <span>{user.firstName} {user.lastName}</span>
           </div>
-          <button className="btn btn-ghost">
+          <button onClick={handleLogout} className="btn btn-ghost">
             <LogOut size={16} />
           </button>
         </div>
@@ -38,8 +60,28 @@ const DashboardPage = () => {
 
       <main className="dashboard-main">
         <div className="container">
+          <div className="user-info">
+            <h2>Your Profile</h2>
+            <div className="profile-card">
+              <p><strong>Name:</strong> {user.firstName} {user.lastName}</p>
+              <p><strong>Email:</strong> {user.email}</p>
+            </div>
+          </div>
+
+          <div className="dashboard-actions">
+            <h2>Quick Actions</h2>
+            <div className="action-buttons">
+              <Link to="/analyze/webcam" className="btn btn-primary">
+                Start Webcam Analysis
+              </Link>
+              <Link to="/analyze/upload" className="btn btn-primary">
+                Upload Video for Analysis
+              </Link>
+            </div>
+          </div>
+
           <div className="dashboard-welcome">
-            <h1>Welcome back, {user.name.split(" ")[0]}!</h1>
+            <h1>Welcome back, {user.firstName}!</h1>
             <p>Choose how you'd like to analyze your basketball gameplay today.</p>
           </div>
 
