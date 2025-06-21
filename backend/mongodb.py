@@ -9,7 +9,7 @@ load_dotenv()
 password = os.getenv("MONGO_PASSWORD")
 
 # Construct the MongoDB URI with the password
-uri = f"mongodb+srv://adityasen120:{password}@clustermain.cswnpek.mongodb.net/?retryWrites=true&w=majority&appName=ClusterMain"
+uri = f"mongodb+srv://adityasen120:{password}@cluster0.xwt5zar.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
 
 # Connect to MongoDB
 client = MongoClient(uri)
