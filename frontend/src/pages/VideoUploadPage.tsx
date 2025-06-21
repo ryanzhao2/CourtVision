@@ -96,10 +96,6 @@ const VideoUploadPage: React.FC = () => {
                   <div className="stat-label">Events Found</div>
                 </div>
                 <div className="stat-item">
-                  <div className="stat-value">8</div>
-                  <div className="stat-label">Key Moments</div>
-                </div>
-                <div className="stat-item">
                   <div className="stat-value">15:30</div>
                   <div className="stat-label">Duration</div>
                 </div>

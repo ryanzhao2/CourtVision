@@ -330,17 +330,13 @@ const AnalysisResultsPage: React.FC = () => {
                     <div className="stat-value error">
                       {analysisEvents.filter((e) => e.severity === "error").length}
                     </div>
-                    <div className="stat-label">Violations</div>
+                    <div className="stat-label">Double Dribbles</div>
                   </div>
                   <div className="stat-item">
                     <div className="stat-value warning">
                       {analysisEvents.filter((e) => e.severity === "warning").length}
                     </div>
-                    <div className="stat-label">Fouls</div>
-                  </div>
-                  <div className="stat-item">
-                    <div className="stat-value info">{analysisEvents.filter((e) => e.severity === "info").length}</div>
-                    <div className="stat-label">Good Plays</div>
+                    <div className="stat-label">Travels</div>
                   </div>
                   <div className="stat-item">
                     <div className="stat-value total">{analysisEvents.length}</div>
@@ -376,27 +372,6 @@ const AnalysisResultsPage: React.FC = () => {
                       </div>
                     </div>
                   ))}
-                </div>
-              </div>
-
-              {/* Export Options */}
-              <div className="export-card">
-                <div className="export-header">
-                  <h3>Export Analysis</h3>
-                </div>
-                <div className="export-options">
-                  <button className="export-btn">
-                    <Info size={16} />
-                    Download Report (PDF)
-                  </button>
-                  <button className="export-btn">
-                    <BarChart3 size={16} />
-                    Export Data (CSV)
-                  </button>
-                  <button className="export-btn">
-                    <Play size={16} />
-                    Share Analysis
-                  </button>
                 </div>
               </div>
             </div>

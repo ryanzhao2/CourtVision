@@ -15,9 +15,6 @@ const HomePage: React.FC = () => {
           <Link to="/features" className="nav-link">
             Features
           </Link>
-          <Link to="/pricing" className="nav-link">
-            Pricing
-          </Link>
           <Link to="/login" className="nav-link">
             Login
           </Link>
