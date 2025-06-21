@@ -8,11 +8,11 @@ load_dotenv()
 # Read password from environment variable
 password = os.getenv("MONGO_PASSWORD")
 
-# Construct the MongoDB URI with the password
+# Construct the MongoDB URI with the password (no ssl_cert_reqs in URI)
 uri = f"mongodb+srv://adityasen120:{password}@cluster0.xwt5zar.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
 
-# Connect to MongoDB
-client = MongoClient(uri)
+# Connect to MongoDB with tlsAllowInvalidCertificates for macOS dev
+client = MongoClient(uri, tlsAllowInvalidCertificates=True)
 
 """ Player DB """
 db = client["basketball_database"]

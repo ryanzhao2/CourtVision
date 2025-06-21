@@ -4,6 +4,7 @@ import type React from "react"
 import { useState } from "react"
 import { Link, useNavigate } from "react-router-dom"
 import { BarChart3 } from "lucide-react"
+import { useAuth } from "../context/AuthContext"
 
 const SignupPage: React.FC = () => {
   const [formData, setFormData] = useState({
@@ -14,51 +15,20 @@ const SignupPage: React.FC = () => {
     confirmPassword: "",
     agreeToTerms: false,
   })
-  const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState("")
+  const { signup, isLoading, error } = useAuth()
   const navigate = useNavigate()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setIsLoading(true)
-    setError("")
-
+    
     // Validate passwords match
     if (formData.password !== formData.confirmPassword) {
-      setError("Passwords do not match")
-      setIsLoading(false)
       return
     }
 
-    try {
-      const response = await fetch('http://127.0.0.1:5000/signup', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          firstName: formData.firstName,
-          lastName: formData.lastName,
-          email: formData.email,
-          password: formData.password,
-        }),
-      })
-
-      const data = await response.json()
-
-      if (response.ok) {
-        // Successful signup
-        console.log('Signup successful:', data)
-        navigate('/dashboard')
-      } else {
-        // Handle error response
-        setError(data.message || 'Signup failed. Please try again.')
-      }
-    } catch (err) {
-      console.error('Signup error:', err)
-      setError('Network error. Please check your connection and try again.')
-    } finally {
-      setIsLoading(false)
+    const success = await signup(formData.firstName, formData.lastName, formData.email, formData.password)
+    if (success) {
+      navigate('/dashboard')
     }
   }
 
