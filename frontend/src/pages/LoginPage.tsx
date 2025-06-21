@@ -8,14 +8,43 @@ import { BarChart3 } from "lucide-react"
 const LoginPage: React.FC = () => {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState("")
   const navigate = useNavigate()
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    // Handle login logic here
-    console.log("Login attempt:", { email, password })
-    // Simulate successful login
-    navigate("/dashboard")
+    setIsLoading(true)
+    setError("")
+
+    try {
+      const response = await fetch('/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: email,
+          password: password,
+        }),
+      })
+
+      const data = await response.json()
+
+      if (response.ok) {
+        // Successful login
+        console.log('Login successful:', data)
+        navigate('/dashboard')
+      } else {
+        // Handle error response
+        setError(data.message || 'Login failed. Please check your credentials.')
+      }
+    } catch (err) {
+      console.error('Login error:', err)
+      setError('Network error. Please check your connection and try again.')
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (
@@ -65,8 +94,18 @@ const LoginPage: React.FC = () => {
               </Link>
             </div>
 
-            <button type="submit" className="btn btn-primary btn-full">
-              Sign In
+            {error && (
+              <div className="error-message">
+                {error}
+              </div>
+            )}
+
+            <button 
+              type="submit" 
+              className="btn btn-primary btn-full"
+              disabled={isLoading}
+            >
+              {isLoading ? 'Signing In...' : 'Sign In'}
             </button>
 
             <div className="auth-switch">
