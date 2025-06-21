@@ -231,10 +231,10 @@ const AnalysisResultsPage: React.FC = () => {
                       preload="metadata"
                     >
                       {/* Change the videoSource variable above to play your own video */}
-                      <source src={`/api/video/${videoSource}`} type="video/mp4" />
+                      <source src={`http://127.0.0.1:5000/api/video/${videoSource}`} type="video/mp4" />
                       {/* Fallback for different video formats */}
-                      <source src={`/api/video/${videoSource.replace('.mp4', '.webm')}`} type="video/webm" />
-                      <source src={`/api/video/${videoSource.replace('.mp4', '.ogg')}`} type="video/ogg" />
+                      <source src={`http://127.0.0.1:5000/api/video/${videoSource.replace('.mp4', '.webm')}`} type="video/webm" />
+                      <source src={`http://127.0.0.1:5000/api/video/${videoSource.replace('.mp4', '.ogg')}`} type="video/ogg" />
                       Your browser does not support the video tag.
                     </video>
 
