@@ -61,11 +61,68 @@ const WebcamAnalysisPage: React.FC = () => {
     }
   }
 
-  const stopAnalysis = () => {
-    setIsRunning(false)
-    setProcessInfo(null)
-    setLiveEvents([])
+  const stopAnalysis = async () => {
+    try {
+      // Call the backend API to kill the basketball analysis process
+      const response = await fetch('http://localhost:5002/api/kill-desktop-app', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      })
+      
+      const data = await response.json()
+      
+      if (data.success) {
+        console.log('Analysis stopped successfully:', data.message)
+        setProcessInfo({
+          message: data.message
+        })
+      } else {
+        console.error('Failed to stop analysis:', data.error)
+        setProcessInfo({
+          error: data.error
+        })
+      }
+    } catch (error) {
+      console.error('Error stopping analysis:', error)
+      setProcessInfo({
+        error: 'Failed to connect to backend server'
+      })
+    }
+    
+    // Reset state after a short delay
+    setTimeout(() => {
+      setIsRunning(false)
+      setProcessInfo(null)
+      setLiveEvents([])
+    }, 2000)
   }
+
+  const checkAnalysisStatus = async () => {
+    try {
+      const response = await fetch('http://localhost:5002/api/analysis-status')
+      const data = await response.json()
+      
+      if (data.running) {
+        setIsRunning(true)
+        setProcessInfo({
+          pid: data.pid,
+          message: data.message
+        })
+      } else {
+        setIsRunning(false)
+        setProcessInfo(null)
+      }
+    } catch (error) {
+      console.error('Error checking analysis status:', error)
+    }
+  }
+
+  // Check status on component mount
+  useEffect(() => {
+    checkAnalysisStatus()
+  }, [])
 
   const simulateLiveEvents = () => {
     const events = [

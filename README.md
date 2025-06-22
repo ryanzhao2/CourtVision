@@ -92,6 +92,8 @@ The frontend will be available at `http://localhost:5173`
 ## API Endpoints
 
 - `POST /api/launch-desktop-app` - Launches the basketball analysis desktop app
+- `POST /api/kill-desktop-app` - Terminates the running basketball analysis process
+- `GET /api/analysis-status` - Gets the current status of the analysis process
 
 ## Troubleshooting
 
