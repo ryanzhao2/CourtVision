@@ -101,7 +101,8 @@ class PlayerTracker:
                 cls_id = frame_detection[3]
                 track_id = frame_detection[4]
 
-                if cls_id == cls_names_inv['Player']:
+                # Use 'person' class instead of 'Player' since yolov8n.pt is a general model
+                if cls_id == cls_names_inv.get('person', cls_names_inv.get('Player', None)):
                     tracks[frame_num][track_id] = {"bbox":bbox}
         
         save_stub(stub_path,tracks)

@@ -12,14 +12,28 @@ password = os.getenv("MONGO_PASSWORD")
 uri = f"mongodb+srv://adityasen120:{password}@cluster0.xwt5zar.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
 
 # Connect to MongoDB with tlsAllowInvalidCertificates for macOS dev
-client = MongoClient(uri, tlsAllowInvalidCertificates=True)
+try:
+    client = MongoClient(uri, tlsAllowInvalidCertificates=True)
+    # Test the connection
+    client.admin.command('ping')
+    print("MongoDB connection successful")
+except Exception as e:
+    print(f"MongoDB connection failed: {e}")
+    client = None
 
 """ Player DB """
-db = client["basketball_database"]
-collection = db["basketball_player_stats"]
+if client is not None:
+    db = client["basketball_database"]
+    collection = db["basketball_player_stats"]
+else:
+    db = None
+    collection = None
 
 def create_player(name, team, points=0, assists=0, rebounds=0, fouls=0):
-    if users_collection.find_one({"name": name}):
+    if collection is None:
+        return None
+        
+    if collection.find_one({"name": name}):
         return None
     
     player = {
@@ -30,74 +44,131 @@ def create_player(name, team, points=0, assists=0, rebounds=0, fouls=0):
         "rebounds": rebounds,
         "fouls": fouls
     }
-    result = collection.insert_one(player)
+    try:
+        result = collection.insert_one(player)
+        return result.inserted_id
+    except Exception as e:
+        print(f"Error creating player: {e}")
+        return None
 
 def update_player(name, updates):
-    result = collection.update_one(
-        {"name": name},
-        {"$set": updates}
-    )
-
-    return result.modified_count
+    if collection is None:
+        return 0
+        
+    try:
+        result = collection.update_one(
+            {"name": name},
+            {"$set": updates}
+        )
+        return result.modified_count
+    except Exception as e:
+        print(f"Error updating player: {e}")
+        return 0
 
 def get_player(name):
-    player = collection.find_one({"name": name})
-    if player:
+    if collection is None:
+        return None
+        
+    try:
+        player = collection.find_one({"name": name})
         return player
-    else:
+    except Exception as e:
+        print(f"Error getting player: {e}")
         return None
 
 def get_all_players():
-    players = list(collection.find())
-
-    return players
+    if collection is None:
+        return []
+        
+    try:
+        players = list(collection.find())
+        return players
+    except Exception as e:
+        print(f"Error getting all players: {e}")
+        return []
 
 def delete_player(name):
-    result = collection.delete_one({"name": name})
-
-    return result.deleted_count
-
+    if collection is None:
+        return 0
+        
+    try:
+        result = collection.delete_one({"name": name})
+        return result.deleted_count
+    except Exception as e:
+        print(f"Error deleting player: {e}")
+        return 0
 
 """ User Account DB """
-db = client["UserDB"]
-users_collection = db["users"]
+if client is not None:
+    user_db = client["UserDB"]
+    users_collection = user_db["users"]
+else:
+    user_db = None
+    users_collection = None
 
 def create_user(first_name, last_name, email, password):
-    if users_collection.find_one({"email": email}):
+    if users_collection is None:
+        return None
+        
+    try:
+        if users_collection.find_one({"email": email}):
+            return None
+
+        user = {
+            "first_name": first_name,
+            "last_name": last_name,
+            "email": email,
+            "password": password
+        }
+        result = users_collection.insert_one(user)
+        return result.inserted_id
+    except Exception as e:
+        print(f"Error creating user: {e}")
         return None
 
-    user = {
-        "first_name": first_name,
-        "last_name": last_name,
-        "email": email,
-        "password": password  # You can hash this later
-    }
-    result = users_collection.insert_one(user)
-
-    return result.inserted_id
-
 def update_user(email, updates):
-    result = users_collection.update_one(
-        {"email": email},
-        {"$set": updates}
-    )
-    
-    return result.modified_count
+    if users_collection is None:
+        return 0
+        
+    try:
+        result = users_collection.update_one(
+            {"email": email},
+            {"$set": updates}
+        )
+        return result.modified_count
+    except Exception as e:
+        print(f"Error updating user: {e}")
+        return 0
 
 def get_user(email):
-    user = users_collection.find_one({"email": email})
-
-    if user:
+    if users_collection is None:
+        return None
+        
+    try:
+        user = users_collection.find_one({"email": email})
         return user
-    else:
+    except Exception as e:
+        print(f"Error getting user: {e}")
         return None
     
 def get_all_users():
-    users = list(users_collection.find())
-
-    return users
+    if users_collection is None:
+        return []
+        
+    try:
+        users = list(users_collection.find())
+        return users
+    except Exception as e:
+        print(f"Error getting all users: {e}")
+        return []
 
 def delete_user(email):
-    result = users_collection.delete_one({"email": email})
-    
-    return result.deleted_count
+    if users_collection is None:
+        return 0
+        
+    try:
+        result = users_collection.delete_one({"email": email})
+        return result.deleted_count
+    except Exception as e:
+        print(f"Error deleting user: {e}")
+        return 0

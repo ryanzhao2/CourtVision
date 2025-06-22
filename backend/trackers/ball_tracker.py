@@ -90,12 +90,21 @@ class BallTracker:
             chosen_bbox =None
             max_confidence = 0
             
+            # Debug: Print detected classes for first few frames
+            if frame_num < 3:
+                detected_classes = [cls_names.get(cls_id, f"unknown_{cls_id}") for cls_id in detection_supervision.class_id]
+                if detected_classes:
+                    print(f"    Frame {frame_num} detected classes: {detected_classes}")
+            
             for frame_detection in detection_supervision:
                 bbox = frame_detection[0].tolist()
                 cls_id = frame_detection[3]
                 confidence = frame_detection[2]
                 
-                if cls_id == cls_names_inv['Ball']:
+                # Use 'sports ball' class or any small object that could be a ball
+                # yolov8n.pt has classes like 'sports ball', 'baseball', etc.
+                ball_classes = ['sports ball', 'baseball', 'tennis ball', 'basketball']
+                if any(cls_name in cls_names_inv and cls_id == cls_names_inv[cls_name] for cls_name in ball_classes):
                     if max_confidence<confidence:
                         chosen_bbox = bbox
                         max_confidence = confidence
@@ -154,11 +163,29 @@ class BallTracker:
             list: List of ball positions with interpolated values filling the gaps.
         """
         ball_positions = [x.get(1,{}).get('bbox',[]) for x in ball_positions]
-        df_ball_positions = pd.DataFrame(ball_positions,columns=['x1','y1','x2','y2'])
+        
+        # Check if we have any valid ball detections
+        valid_detections = [pos for pos in ball_positions if len(pos) == 4]
+        
+        if not valid_detections:
+            print("    Warning: No ball detections found. Creating empty ball tracks.")
+            # Return empty ball positions for all frames
+            return [{1: {"bbox": []}} for _ in range(len(ball_positions))]
+        
+        # Fill empty detections with None for interpolation
+        ball_positions_filled = []
+        for pos in ball_positions:
+            if len(pos) == 4:
+                ball_positions_filled.append(pos)
+            else:
+                ball_positions_filled.append([None, None, None, None])
+        
+        df_ball_positions = pd.DataFrame(ball_positions_filled, columns=['x1','y1','x2','y2'])
 
         # Interpolate missing values
         df_ball_positions = df_ball_positions.interpolate()
         df_ball_positions = df_ball_positions.bfill()
+        df_ball_positions = df_ball_positions.ffill()  # Forward fill any remaining NaNs
 
-        ball_positions = [{1: {"bbox":x}} for x in df_ball_positions.to_numpy().tolist()]
+        ball_positions = [{1: {"bbox": x if not x.isna().any() else []}} for x in df_ball_positions.to_numpy().tolist()]
         return ball_positions

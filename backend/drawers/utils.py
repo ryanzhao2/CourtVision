@@ -23,6 +23,10 @@ def draw_traingle(frame,bbox,color):
     Returns:
         numpy.ndarray: The frame with the triangle drawn on it.
     """
+    # Validate bbox
+    if bbox is None or len(bbox) < 4:
+        return frame
+    
     y= int(bbox[1])
     x,_ = get_center_of_bbox(bbox)
 
@@ -49,6 +53,10 @@ def draw_ellipse(frame,bbox,color,track_id=None):
     Returns:
         numpy.ndarray: The frame with the ellipse and optional track ID drawn on it.
     """
+    # Validate bbox
+    if bbox is None or len(bbox) < 4:
+        return frame
+    
     y2 = int(bbox[3])
     x_center, _ = get_center_of_bbox(bbox)
     width = get_bbox_width(bbox)

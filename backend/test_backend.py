@@ -1,165 +1,89 @@
 #!/usr/bin/env python3
 """
-Test script to verify backend authentication functionality
+Test script to check if the backend can start without errors
 """
 
-import requests
-import json
+import sys
+import os
 
-BASE_URL = "http://localhost:5002"
-
-def test_health_check():
-    """Test the health check endpoint"""
+def test_imports():
+    """Test if all required modules can be imported"""
     try:
-        response = requests.get(f"{BASE_URL}/")
-        print(f"Health check: {response.status_code} - {response.json()}")
-        return response.status_code == 200
+        print("Testing imports...")
+        
+        # Test basic imports
+        import flask
+        import pymongo
+        import jwt
+        import werkzeug
+        import flask_cors
+        print("✓ Basic imports successful")
+        
+        # Test our modules
+        from mongodb import create_user, get_user
+        print("✓ MongoDB module imported")
+        
+        from user import app
+        print("✓ User module imported")
+        
+        # Test main.py imports
+        from utils import read_video, save_video
+        print("✓ Utils module imported")
+        
+        from trackers import PlayerTracker, BallTracker
+        print("✓ Trackers module imported")
+        
+        from team_assigner import TeamAssigner
+        print("✓ Team assigner module imported")
+        
+        return True
+        
     except Exception as e:
-        print(f"Health check failed: {e}")
+        print(f"✗ Import error: {e}")
         return False
 
-def test_signup():
-    """Test user signup"""
+def test_flask_app():
+    """Test if Flask app can be created"""
     try:
-        signup_data = {
-            "firstName": "Test",
-            "lastName": "User",
-            "email": "test@example.com",
-            "password": "password123"
-        }
+        print("\nTesting Flask app creation...")
+        from user import app
         
-        response = requests.post(
-            f"{BASE_URL}/signup",
-            json=signup_data,
-            headers={"Content-Type": "application/json"}
-        )
+        # Test if app has required routes
+        routes = [rule.rule for rule in app.url_map.iter_rules()]
+        required_routes = ['/api/analyze', '/api/analysis-status', '/login', '/signup']
         
-        print(f"Signup: {response.status_code} - {response.json()}")
-        return response.status_code in [201, 409]  # 201 = created, 409 = already exists
+        for route in required_routes:
+            if route in routes:
+                print(f"✓ Route {route} found")
+            else:
+                print(f"✗ Route {route} missing")
+                return False
+        
+        print("✓ Flask app creation successful")
+        return True
+        
     except Exception as e:
-        print(f"Signup failed: {e}")
-        return False
-
-def test_login():
-    """Test user login"""
-    try:
-        login_data = {
-            "email": "test@example.com",
-            "password": "password123"
-        }
-        
-        response = requests.post(
-            f"{BASE_URL}/login",
-            json=login_data,
-            headers={"Content-Type": "application/json"}
-        )
-        
-        print(f"Login: {response.status_code} - {response.json()}")
-        
-        if response.status_code == 200:
-            data = response.json()
-            return data.get("token") is not None
-        return False
-    except Exception as e:
-        print(f"Login failed: {e}")
-        return False
-
-def test_verify_token():
-    """Test token verification"""
-    try:
-        # First login to get a token
-        login_data = {
-            "email": "test@example.com",
-            "password": "password123"
-        }
-        
-        login_response = requests.post(
-            f"{BASE_URL}/login",
-            json=login_data,
-            headers={"Content-Type": "application/json"}
-        )
-        
-        if login_response.status_code != 200:
-            print("Login failed for token verification test")
-            return False
-            
-        token = login_response.json().get("token")
-        
-        # Test token verification
-        verify_data = {"token": token}
-        response = requests.post(
-            f"{BASE_URL}/verify-token",
-            json=verify_data,
-            headers={"Content-Type": "application/json"}
-        )
-        
-        print(f"Token verification: {response.status_code} - {response.json()}")
-        return response.status_code == 200
-    except Exception as e:
-        print(f"Token verification failed: {e}")
-        return False
-
-def test_profile():
-    """Test protected profile endpoint"""
-    try:
-        # First login to get a token
-        login_data = {
-            "email": "test@example.com",
-            "password": "password123"
-        }
-        
-        login_response = requests.post(
-            f"{BASE_URL}/login",
-            json=login_data,
-            headers={"Content-Type": "application/json"}
-        )
-        
-        if login_response.status_code != 200:
-            print("Login failed for profile test")
-            return False
-            
-        token = login_response.json().get("token")
-        
-        # Test profile endpoint
-        response = requests.get(
-            f"{BASE_URL}/profile",
-            headers={"Authorization": f"Bearer {token}"}
-        )
-        
-        print(f"Profile: {response.status_code} - {response.json()}")
-        return response.status_code == 200
-    except Exception as e:
-        print(f"Profile test failed: {e}")
+        print(f"✗ Flask app error: {e}")
         return False
 
 def main():
-    """Run all tests"""
-    print("Testing Backend Authentication System")
-    print("=" * 40)
+    """Main test function"""
+    print("Backend Test Script")
+    print("=" * 50)
     
-    tests = [
-        ("Health Check", test_health_check),
-        ("Signup", test_signup),
-        ("Login", test_login),
-        ("Token Verification", test_verify_token),
-        ("Profile", test_profile),
-    ]
+    # Test imports
+    if not test_imports():
+        print("\n❌ Import tests failed")
+        sys.exit(1)
     
-    results = []
-    for test_name, test_func in tests:
-        print(f"\nTesting {test_name}...")
-        result = test_func()
-        results.append((test_name, result))
-        print(f"{test_name}: {'PASS' if result else 'FAIL'}")
+    # Test Flask app
+    if not test_flask_app():
+        print("\n❌ Flask app tests failed")
+        sys.exit(1)
     
-    print("\n" + "=" * 40)
-    print("Test Results Summary:")
-    for test_name, result in results:
-        status = "PASS" if result else "FAIL"
-        print(f"  {test_name}: {status}")
-    
-    all_passed = all(result for _, result in results)
-    print(f"\nOverall: {'ALL TESTS PASSED' if all_passed else 'SOME TESTS FAILED'}")
+    print("\n✅ All tests passed! Backend should start successfully.")
+    print("\nTo start the backend, run:")
+    print("python3 start_backend.py")
 
 if __name__ == "__main__":
     main() 

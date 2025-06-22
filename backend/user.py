@@ -13,6 +13,7 @@ import psutil
 import atexit
 import time
 import uuid
+import json
 from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
@@ -633,6 +634,14 @@ def analyze_video(current_user):
                 'stdout': result.stdout
             }), 500
         
+        # Check if output video was created
+        if not os.path.exists(output_video_path):
+            return jsonify({
+                'error': 'Analysis completed but output video not found',
+                'stdout': result.stdout,
+                'stderr': result.stderr
+            }), 500
+        
         if not os.path.exists(events_data_path):
             return jsonify({
                 'error': 'Analysis completed but events data not found',
@@ -653,11 +662,51 @@ def analyze_video(current_user):
     except Exception as e:
         return jsonify({'error': f'Server error: {str(e)}'}), 500
 
+@app.route('/processed_video/<session_id>/<filename>', methods=['OPTIONS'])
+def serve_processed_video_options(session_id, filename):
+    response = jsonify({'message': 'OK'})
+    response.headers['Access-Control-Allow-Origin'] = '*'
+    response.headers['Access-Control-Allow-Methods'] = 'GET, OPTIONS'
+    response.headers['Access-Control-Allow-Headers'] = 'Authorization, Content-Type'
+    return response
+
 @app.route('/processed_video/<session_id>/<filename>', methods=['GET'])
-@token_required
-def serve_processed_video(current_user, session_id, filename):
+def serve_processed_video(session_id, filename):
+    # Check for token in query parameters first, then in headers
+    token = request.args.get('token')
+    if not token:
+        auth_header = request.headers.get('Authorization')
+        if auth_header and auth_header.startswith('Bearer '):
+            token = auth_header.split(' ')[1]
+    
+    if not token:
+        return jsonify({'error': 'No token provided'}), 401
+    
+    try:
+        # Verify token
+        payload = jwt.decode(token, app.config['SECRET_KEY'], algorithms=['HS256'])
+        user = get_user(payload['email'])
+        if not user:
+            return jsonify({'error': 'Invalid token'}), 401
+    except jwt.ExpiredSignatureError:
+        return jsonify({'error': 'Token expired'}), 401
+    except jwt.InvalidTokenError:
+        return jsonify({'error': 'Invalid token'}), 401
+    
     video_directory = os.path.join('output_videos', session_id)
-    return send_from_directory(video_directory, filename)
+    video_path = os.path.join(video_directory, filename)
+    
+    if not os.path.exists(video_path):
+        return jsonify({'error': 'Video file not found'}), 404
+    
+    # Add CORS headers for video streaming
+    response = send_from_directory(video_directory, filename)
+    response.headers['Access-Control-Allow-Origin'] = '*'
+    response.headers['Access-Control-Allow-Methods'] = 'GET, OPTIONS'
+    response.headers['Access-Control-Allow-Headers'] = 'Authorization, Content-Type'
+    response.headers['Content-Type'] = 'video/mp4'
+    
+    return response
 
 @app.route('/sessions', methods=['GET'])
 @token_required
@@ -698,36 +747,6 @@ def cleanup_session(current_user, session_id):
         
     except Exception as e:
         return jsonify({'error': f'Server error: {str(e)}'}), 500
-
-@app.route('/api/analysis-status', methods=['GET'])
-@token_required
-def get_analysis_status(current_user):
-    """Get the current status of the analysis process"""
-    global opencv_process
-    
-    try:
-        if opencv_process is None:
-            return jsonify({
-                'running': False,
-                'message': 'No analysis process is running'
-            })
-        
-        # Check if process is still running
-        if opencv_process.poll() is None:
-            return jsonify({
-                'running': True,
-                'pid': opencv_process.pid,
-                'message': 'Analysis is currently running'
-            })
-        else:
-            opencv_process = None
-            return jsonify({
-                'running': False,
-                'message': 'Analysis process has ended'
-            })
-        
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
 
 def allowed_file(filename):
     """Check if the file has an allowed extension."""

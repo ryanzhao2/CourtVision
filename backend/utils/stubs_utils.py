@@ -37,8 +37,21 @@ def read_stub(read_from_stub,stub_path):
         object: The loaded Python object if successful, None otherwise.
     """
     if read_from_stub and stub_path is not None and os.path.exists(stub_path):
-        with open(stub_path,'rb') as f:
-            object = pickle.load(f)
-            return object
+        try:
+            with open(stub_path,'rb') as f:
+                object = pickle.load(f)
+                return object
+        except (ModuleNotFoundError, ImportError, ValueError, EOFError) as e:
+            # Handle numpy version incompatibilities and other pickle errors
+            print(f"Warning: Could not load stub from {stub_path}: {e}")
+            print("This usually happens due to numpy version incompatibility.")
+            print("The stub will be regenerated during processing.")
+            # Remove the corrupted stub file
+            try:
+                os.remove(stub_path)
+                print(f"Removed corrupted stub file: {stub_path}")
+            except:
+                pass
+            return None
     return None
     

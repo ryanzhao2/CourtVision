@@ -18,6 +18,8 @@ class SpeedAndDistanceDrawer():
 
             
             for player_id,bbox in player_tracks.items():
+                if bbox is None or 'bbox' not in bbox or len(bbox['bbox']) < 4:
+                    continue
                 x1,y1,x2,y2 = bbox['bbox']
                 position = [int((x1+x2)/2),int(y2)]
                 position[1]+=40

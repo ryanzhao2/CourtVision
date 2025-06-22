@@ -1,7 +1,6 @@
 "use client"
 
-import type React from "react"
-import { useState, useRef } from "react"
+import React, { useState, useRef } from "react"
 import { Link, useNavigate } from "react-router-dom"
 import { Upload, BarChart3, ArrowLeft, FileVideo, CheckCircle, AlertCircle } from "lucide-react"
 import { useAuth } from "../context/AuthContext"
@@ -48,30 +47,40 @@ const VideoUploadPage: React.FC = () => {
   }
 
   const uploadAndAnalyze = async () => {
-    if (!selectedFile) return
+    if (!selectedFile) {
+      setError("Please select a video file first")
+      return
+    }
+
+    if (!token) {
+      setError("Please log in to upload videos")
+      return
+    }
 
     setIsUploading(true)
-    setIsAnalyzing(true)
+    setIsAnalyzing(false)
     setError(null)
     setUploadProgress(0)
 
-    const formData = new FormData()
-    formData.append('video', selectedFile)
-    formData.append('max_frames', '300') // Optional: limit frames for faster testing
-
     try {
+      // Create FormData for file upload
+      const formData = new FormData()
+      formData.append('video', selectedFile)
+      formData.append('max_frames', '300') // Optional: limit frames for faster testing
+
       // Simulate upload progress
       const progressInterval = setInterval(() => {
-        setUploadProgress(prev => {
+        setUploadProgress((prev) => {
           if (prev >= 90) {
             clearInterval(progressInterval)
             return 90
-        }
-        return prev + 10
-      })
-    }, 200)
+          }
+          return prev + 10
+        })
+      }, 200)
 
-      const response = await fetch('/api/analyze', {
+      // Make API call to backend server at localhost:5002
+      const response = await fetch('http://localhost:5002/api/analyze', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -83,7 +92,7 @@ const VideoUploadPage: React.FC = () => {
       setUploadProgress(100)
 
       if (!response.ok) {
-        const errorData = await response.json()
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }))
         let detailedError = errorData.error || 'Upload failed'
         if (errorData.stderr) {
           detailedError += `:\n\n${errorData.stderr}`
@@ -95,16 +104,24 @@ const VideoUploadPage: React.FC = () => {
       
       if (data.success) {
         setAnalysisData(data)
-        setIsAnalyzing(false)
-        setAnalysisComplete(true)
+        setIsUploading(false)
+        setIsAnalyzing(true)
+        
+        // Simulate analysis time
+        setTimeout(() => {
+          setIsAnalyzing(false)
+          setAnalysisComplete(true)
+        }, 2000)
       } else {
         throw new Error(data.message || 'Analysis failed')
       }
 
     } catch (err) {
+      console.error('Upload error:', err)
       setError(err instanceof Error ? err.message : 'Upload failed')
       setIsUploading(false)
       setIsAnalyzing(false)
+      setUploadProgress(0)
     }
   }
 
@@ -241,6 +258,13 @@ const VideoUploadPage: React.FC = () => {
                       </button>
                     </div>
 
+                    {error && (
+                      <div className="error-message" style={{ color: 'red', marginTop: '10px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <AlertCircle size={16} />
+                        {error}
+                      </div>
+                    )}
+
                     {isUploading && (
                       <div className="upload-progress">
                         <div className="progress-info">
@@ -265,14 +289,6 @@ const VideoUploadPage: React.FC = () => {
                         Start Analysis
                       </button>
                     )}
-                  </div>
-                )}
-
-                {/* Error Display */}
-                {error && (
-                  <div className="error-message">
-                    <AlertCircle size={16} />
-                    <pre className="error-pre">{error}</pre>
                   </div>
                 )}
               </div>

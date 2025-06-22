@@ -85,14 +85,14 @@ const AnalysisResultsPage: React.FC = () => {
         const sessionId = urlParams.get('session_id')
         
         if (sessionId) {
-          const response = await fetch(`/api/events/${sessionId}`)
+          const response = await fetch(`http://localhost:5002/api/events/${sessionId}`)
           if (response.ok) {
             const eventsData = await response.json()
             setAnalysisData({
               success: true,
               session_id: sessionId,
               events: eventsData,
-              output_video_url: `/api/video/${sessionId}`,
+              output_video_url: `/processed_video/${sessionId}/analyzed_video.mp4`,
               message: 'Analysis loaded successfully'
             })
           } else {
@@ -112,7 +112,7 @@ const AnalysisResultsPage: React.FC = () => {
   }, [])
 
   const videoUrl = analysisData 
-    ? `http://localhost:5001${analysisData.output_video_url}?token=${token}` 
+    ? `http://localhost:5002${analysisData.output_video_url}?token=${token}` 
     : ""
 
   // Convert backend events to frontend format

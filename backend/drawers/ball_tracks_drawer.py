@@ -33,7 +33,7 @@ class BallTracksDrawer:
 
             # Draw ball 
             for _, ball in ball_dict.items():
-                if ball["bbox"] is None:
+                if ball["bbox"] is None or len(ball["bbox"]) < 4:
                     continue
                 frame = draw_traingle(frame, ball["bbox"],self.ball_pointer_color)
 
