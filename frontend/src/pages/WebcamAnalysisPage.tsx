@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useState, useRef, useEffect } from "react"
+import { useState, useEffect } from "react"
 import { Link } from "react-router-dom"
 import { Camera, Square, BarChart3, ArrowLeft, AlertTriangle, CheckCircle } from "lucide-react"
 
@@ -14,49 +14,70 @@ interface LiveEvent {
 }
 
 const WebcamAnalysisPage: React.FC = () => {
-  const [isRecording, setIsRecording] = useState(false)
-  const [stream, setStream] = useState<MediaStream | null>(null)
+  const [isRunning, setIsRunning] = useState(false)
   const [liveEvents, setLiveEvents] = useState<LiveEvent[]>([])
-  const videoRef = useRef<HTMLVideoElement>(null)
+  const [processInfo, setProcessInfo] = useState<{
+    pid?: number
+    message?: string
+    error?: string
+  } | null>(null)
 
-  const startRecording = async () => {
+  const startAnalysis = async () => {
     try {
-      const mediaStream = await navigator.mediaDevices.getUserMedia({
-        video: { width: 1280, height: 720 },
-        audio: false,
+      setIsRunning(true)
+      setProcessInfo(null)
+      
+      // Call the backend API to launch the basketball analysis
+      const response = await fetch('http://localhost:5002/api/launch-desktop-app', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
       })
-      setStream(mediaStream)
-      if (videoRef.current) {
-        videoRef.current.srcObject = mediaStream
+      
+      const data = await response.json()
+      
+      if (data.success) {
+        setProcessInfo({
+          pid: data.pid,
+          message: data.message
+        })
+        
+        // Simulate some live events for demonstration
+        simulateLiveEvents()
+        
+        console.log('Basketball analysis launched successfully:', data.message)
+      } else {
+        setProcessInfo({
+          error: data.error
+        })
+        console.error('Failed to launch basketball analysis:', data.error)
       }
-      setIsRecording(true)
-      simulateLiveEvents()
     } catch (error) {
-      console.error("Error accessing webcam:", error)
+      setProcessInfo({
+        error: 'Failed to connect to backend server'
+      })
+      console.error('Error launching basketball analysis:', error)
     }
   }
 
-  const stopRecording = () => {
-    if (stream) {
-      stream.getTracks().forEach((track) => track.stop())
-      setStream(null)
-    }
-    setIsRecording(false)
+  const stopAnalysis = () => {
+    setIsRunning(false)
+    setProcessInfo(null)
     setLiveEvents([])
   }
 
   const simulateLiveEvents = () => {
     const events = [
-      { type: "Foul", description: "Personal foul detected - pushing", severity: "warning" as const },
-      { type: "Violation", description: "Double dribble violation", severity: "error" as const },
-      { type: "Good Play", description: "Clean steal executed", severity: "info" as const },
-      { type: "Foul", description: "Traveling violation", severity: "warning" as const },
-      { type: "Good Play", description: "Successful three-point shot", severity: "info" as const },
+      { type: "Analysis Started", description: "Basketball analysis window opened", severity: "info" as const },
+      { type: "Detection Active", description: "Real-time ball and player detection running", severity: "info" as const },
+      { type: "Webcam Active", description: "Backend webcam feed processing", severity: "info" as const },
+      { type: "OpenCV Overlays", description: "Visual overlays and analytics displayed", severity: "info" as const },
     ]
 
     let eventIndex = 0
     const interval = setInterval(() => {
-      if (eventIndex < events.length && isRecording) {
+      if (eventIndex < events.length && isRunning) {
         const event = events[eventIndex]
         setLiveEvents((prev) => [
           ...prev,
@@ -70,16 +91,8 @@ const WebcamAnalysisPage: React.FC = () => {
       } else {
         clearInterval(interval)
       }
-    }, 3000)
+    }, 1000)
   }
-
-  useEffect(() => {
-    return () => {
-      if (stream) {
-        stream.getTracks().forEach((track) => track.stop())
-      }
-    }
-  }, [stream])
 
   const getEventIcon = (severity: string) => {
     switch (severity) {
@@ -103,15 +116,15 @@ const WebcamAnalysisPage: React.FC = () => {
           </Link>
           <div className="page-title">
             <BarChart3 size={24} />
-            <span>Live Analysis</span>
+            <span>Basketball Analysis</span>
           </div>
         </div>
 
         <div className="header-right">
-          {isRecording && (
+          {isRunning && (
             <div className="recording-badge">
               <div className="pulse-dot"></div>
-              Recording
+              Analysis Running
             </div>
           )}
         </div>
@@ -125,29 +138,49 @@ const WebcamAnalysisPage: React.FC = () => {
               <div className="video-card">
                 <div className="video-header">
                   <Camera size={20} />
-                  <h3>Live Video Feed</h3>
+                  <h3>Basketball Analysis</h3>
                 </div>
                 <div className="video-container">
-                  <video ref={videoRef} autoPlay muted playsInline className="video-feed" />
-                  {!isRecording && (
+                  {!isRunning ? (
                     <div className="video-overlay">
                       <div className="video-placeholder">
                         <Camera size={64} className="placeholder-icon" />
-                        <p>Ready to start live analysis</p>
-                        <button onClick={startRecording} className="btn btn-primary btn-large">
-                          Start Recording
+                        <p>Ready to start basketball analysis</p>
+                        <p className="text-sm text-gray-600 mt-2">
+                          This will open a desktop window with real-time analysis using the backend webcam
+                        </p>
+                        <button onClick={startAnalysis} className="btn btn-primary btn-large">
+                          Start Analysis
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="video-overlay">
+                      <div className="video-placeholder">
+                        <CheckCircle size={64} className="placeholder-icon text-green" />
+                        <p>Analysis Window Active</p>
+                        <p className="text-sm text-gray-600 mt-2">
+                          Check your desktop for the basketball analysis window
+                        </p>
+                        {processInfo?.message && (
+                          <p className="text-sm text-blue-600 mt-2">{processInfo.message}</p>
+                        )}
+                        {processInfo?.pid && (
+                          <p className="text-sm text-gray-500 mt-1">Process ID: {processInfo.pid}</p>
+                        )}
+                        <button onClick={stopAnalysis} className="btn btn-danger btn-large">
+                          <Square size={16} />
+                          Stop Analysis
                         </button>
                       </div>
                     </div>
                   )}
                 </div>
 
-                {isRecording && (
-                  <div className="video-controls">
-                    <button onClick={stopRecording} className="btn btn-danger btn-large">
-                      <Square size={16} />
-                      Stop Recording
-                    </button>
+                {processInfo?.error && (
+                  <div className="error-message">
+                    <AlertTriangle size={16} />
+                    <span>{processInfo.error}</span>
                   </div>
                 )}
               </div>
@@ -157,12 +190,12 @@ const WebcamAnalysisPage: React.FC = () => {
             <div className="events-section">
               <div className="events-card">
                 <div className="events-header">
-                  <h3>Live Events</h3>
+                  <h3>Analysis Status</h3>
                 </div>
                 <div className="events-list">
                   {liveEvents.length === 0 ? (
                     <p className="events-placeholder">
-                      {isRecording ? "Analyzing... Events will appear here" : "Start recording to see live events"}
+                      {isRunning ? "Starting analysis..." : "Start analysis to see status updates"}
                     </p>
                   ) : (
                     liveEvents.map((event) => (
@@ -183,29 +216,43 @@ const WebcamAnalysisPage: React.FC = () => {
                 </div>
               </div>
 
-              {/* Stats */}
+              {/* Instructions */}
               <div className="stats-card">
                 <div className="stats-header">
-                  <h3>Session Stats</h3>
+                  <h3>How to Use</h3>
                 </div>
-                <div className="stats-grid">
-                  <div className="stat-item">
-                    <div className="stat-value error">{liveEvents.filter((e) => e.severity === "error").length}</div>
-                    <div className="stat-label">Violations</div>
+                <div className="instructions">
+                  <ol>
+                    <li>Click "Start Analysis" to launch the desktop app</li>
+                    <li>A new window will open with real-time basketball analysis</li>
+                    <li>The app uses your computer's webcam for detection</li>
+                    <li>Press 'q' in the analysis window to quit</li>
+                    <li>You'll see overlays, bounding boxes, and violation detection</li>
+                  </ol>
+                </div>
+              </div>
+
+              {/* Features */}
+              <div className="stats-card">
+                <div className="stats-header">
+                  <h3>Features</h3>
+                </div>
+                <div className="features-list">
+                  <div className="feature-item">
+                    <CheckCircle size={16} className="text-green" />
+                    <span>Real-time basketball detection</span>
                   </div>
-                  <div className="stat-item">
-                    <div className="stat-value warning">
-                      {liveEvents.filter((e) => e.severity === "warning").length}
-                    </div>
-                    <div className="stat-label">Fouls</div>
+                  <div className="feature-item">
+                    <CheckCircle size={16} className="text-green" />
+                    <span>Player pose estimation</span>
                   </div>
-                  <div className="stat-item">
-                    <div className="stat-value info">{liveEvents.filter((e) => e.severity === "info").length}</div>
-                    <div className="stat-label">Good Plays</div>
+                  <div className="feature-item">
+                    <CheckCircle size={16} className="text-green" />
+                    <span>Traveling violation detection</span>
                   </div>
-                  <div className="stat-item">
-                    <div className="stat-value total">{liveEvents.length}</div>
-                    <div className="stat-label">Total Events</div>
+                  <div className="feature-item">
+                    <CheckCircle size={16} className="text-green" />
+                    <span>Visual overlays and analytics</span>
                   </div>
                 </div>
               </div>
