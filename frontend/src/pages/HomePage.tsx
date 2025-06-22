@@ -12,9 +12,6 @@ const HomePage: React.FC = () => {
           <span>CourtVision</span>
         </Link>
         <nav className="nav">
-          <Link to="/features" className="nav-link">
-            Features
-          </Link>
           <Link to="/login" className="nav-link">
             Login
           </Link>
