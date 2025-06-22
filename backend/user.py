@@ -6,6 +6,8 @@ import jwt
 import datetime
 import os
 from functools import wraps
+import subprocess
+import sys
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'your-secret-key-change-this-in-production')
@@ -187,6 +189,34 @@ def serve_video(filename):
         return send_from_directory(backend_dir, filename)
     except FileNotFoundError:
         return jsonify({"error": "Video file not found"}), 404
+
+@app.route('/api/launch-desktop-app', methods=['POST'])
+def launch_desktop_app():
+    """Launch the person_ball_detection.py desktop app with backend webcam"""
+    try:
+        # Path to the person_ball_detection.py script
+        script_path = os.path.join(os.path.dirname(__file__), 'opencv-test', 'person_ball_detection.py')
+        
+        # Check if the script exists
+        if not os.path.exists(script_path):
+            return jsonify({'error': 'person_ball_detection.py not found'}), 404
+        
+        # Launch the Python script with backend webcam
+        # Use subprocess.Popen to run it in the background
+        process = subprocess.Popen([sys.executable, script_path], 
+                                 cwd=os.path.dirname(script_path),
+                                 stdout=subprocess.PIPE,
+                                 stderr=subprocess.PIPE)
+        
+        return jsonify({
+            'success': True,
+            'message': 'Basketball analysis launched successfully with backend webcam',
+            'pid': process.pid,
+            'note': 'The analysis window will open on your desktop. Press q to quit.'
+        })
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 if __name__ == "__main__":
     app.run(debug=True)
