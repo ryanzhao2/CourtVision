@@ -104,10 +104,24 @@ class BallTracker:
                 # Use 'sports ball' class or any small object that could be a ball
                 # yolov8n.pt has classes like 'sports ball', 'baseball', etc.
                 ball_classes = ['sports ball', 'baseball', 'tennis ball', 'basketball']
+                class_name = cls_names.get(cls_id, f"unknown_{cls_id}")
+                
+                # Check if it's a known ball class
                 if any(cls_name in cls_names_inv and cls_id == cls_names_inv[cls_name] for cls_name in ball_classes):
-                    if max_confidence<confidence:
+                    if max_confidence < confidence:
                         chosen_bbox = bbox
                         max_confidence = confidence
+                
+                # Also check for any small, high-confidence objects that could be a ball
+                # (small bounding box area, high confidence)
+                bbox_area = (bbox[2] - bbox[0]) * (bbox[3] - bbox[1])
+                if (confidence > 0.7 and  # High confidence
+                    bbox_area < 5000 and   # Small object (less than 5000 pixels)
+                    bbox_area > 100):      # But not too small (more than 100 pixels)
+                    if max_confidence < confidence:
+                        chosen_bbox = bbox
+                        max_confidence = confidence
+                        print(f"    Frame {frame_num} detected potential ball: {class_name} (confidence: {confidence:.2f}, area: {bbox_area:.0f})")
 
             if chosen_bbox is not None:
                 tracks[frame_num][1] = {"bbox":chosen_bbox}
@@ -187,5 +201,5 @@ class BallTracker:
         df_ball_positions = df_ball_positions.bfill()
         df_ball_positions = df_ball_positions.ffill()  # Forward fill any remaining NaNs
 
-        ball_positions = [{1: {"bbox": x if not x.isna().any() else []}} for x in df_ball_positions.to_numpy().tolist()]
+        ball_positions = [{1: {"bbox": x if not any(pd.isna(val) for val in x) else []}} for x in df_ball_positions.to_numpy().tolist()]
         return ball_positions

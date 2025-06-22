@@ -145,7 +145,7 @@ const AnalysisResultsPage: React.FC = () => {
   }
 
   const handleTimeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newTime = Number.parseInt(e.target.value)
+    const newTime = parseFloat(e.target.value)
     setCurrentTime(newTime)
     if (videoRef.current) {
       videoRef.current.currentTime = newTime
@@ -201,24 +201,33 @@ const AnalysisResultsPage: React.FC = () => {
     if (!video) return
 
     const handleLoadedMetadata = () => {
+      console.log('Video metadata loaded, duration:', video.duration)
       setDuration(video.duration)
     }
 
     const handleTimeUpdate = () => {
+      console.log('Video time update:', video.currentTime, 'Duration:', video.duration)
       setCurrentTime(video.currentTime)
     }
 
     const handlePlay = () => {
+      console.log('Video started playing')
       setIsPlaying(true)
     }
 
     const handlePause = () => {
+      console.log('Video paused')
       setIsPlaying(false)
     }
 
     const handleEnded = () => {
+      console.log('Video ended')
       setIsPlaying(false)
       setCurrentTime(0)
+    }
+
+    const handleError = (e: Event) => {
+      console.error('Video error:', e)
     }
 
     video.addEventListener('loadedmetadata', handleLoadedMetadata)
@@ -226,6 +235,7 @@ const AnalysisResultsPage: React.FC = () => {
     video.addEventListener('play', handlePlay)
     video.addEventListener('pause', handlePause)
     video.addEventListener('ended', handleEnded)
+    video.addEventListener('error', handleError)
 
     return () => {
       video.removeEventListener('loadedmetadata', handleLoadedMetadata)
@@ -233,6 +243,7 @@ const AnalysisResultsPage: React.FC = () => {
       video.removeEventListener('play', handlePlay)
       video.removeEventListener('pause', handlePause)
       video.removeEventListener('ended', handleEnded)
+      video.removeEventListener('error', handleError)
     }
   }, [])
 
@@ -304,6 +315,10 @@ const AnalysisResultsPage: React.FC = () => {
                     <div className="video-controls-overlay">
                       {/* Progress Bar with Event Markers */}
                       <div className="progress-container">
+                        <div className="progress-time-labels">
+                          <span>{formatTime(currentTime)}</span>
+                          <span>{formatTime(duration || markerDuration)}</span>
+                        </div>
                         <input
                           type="range"
                           min="0"
@@ -311,6 +326,10 @@ const AnalysisResultsPage: React.FC = () => {
                           value={currentTime}
                           onChange={handleTimeChange}
                           className="progress-slider"
+                          step="any"
+                          style={{ 
+                            background: `linear-gradient(to right, #4f46e5 ${(currentTime/(duration||markerDuration))*100}%, #e5e7eb ${(currentTime/(duration||markerDuration))*100}%)` 
+                          }}
                         />
 
                         {/* Event Markers */}

@@ -94,13 +94,17 @@ class TeamAssigner:
             h, s, v = avg_hsv
             
             # Classify based on value (brightness) and saturation
-            if v > 150 and s < 80:  # High value, low saturation = light
+            if v > 160 and s < 60:  # High value, low saturation = light
                 return 'light'
-            elif v < 120 and s > 50:  # Low value, high saturation = dark
+            elif v < 100 and s > 60:  # Low value, high saturation = dark
+                return 'dark'
+            elif v > 140:  # High value regardless of saturation = light
+                return 'light'
+            elif v < 120:  # Low value regardless of saturation = dark
                 return 'dark'
             else:
-                # Use value as primary indicator
-                return 'light' if v > 120 else 'dark'
+                # Use saturation as tiebreaker for medium values
+                return 'light' if s < 80 else 'dark'
                 
         except Exception as e:
             return 'light'  # Default for any errors
@@ -163,10 +167,10 @@ class TeamAssigner:
         player_assignment = []
         total_frames = len(player_tracks)
         
-        print(f"    Processing {total_frames} frames (sampling every 30th frame)...")
+        print(f"    Processing {total_frames} frames (sampling every 10th frame)...")
         
-        # Only process every 30th frame for maximum speed, then interpolate
-        sample_interval = 30
+        # Process every 10th frame instead of 30th for better accuracy
+        sample_interval = 10
         sampled_frames = []
         sampled_assignments = []
         
@@ -174,8 +178,8 @@ class TeamAssigner:
             if frame_num % 100 == 0:
                 print(f"    Sample frame {frame_num}/{total_frames} ({frame_num/total_frames*100:.1f}%)")
             
-            # Reset player team dict every 500 frames to handle new players
-            if frame_num % 500 == 0:
+            # Reset player team dict every 200 frames to handle new players
+            if frame_num % 200 == 0:
                 self.player_team_dict = {}
 
             frame_assignment = {}
