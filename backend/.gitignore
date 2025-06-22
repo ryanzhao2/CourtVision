@@ -1,25 +1,29 @@
+# Model files
+*.pt
+*.pth
+*.onnx
+
+# Stub files / Cache
+stubs/
+*.pkl
+
+# Python virtual environment
+venv/
+.venv/
+env/
+.env
+
 # Python cache
 __pycache__/
 *.pyc
+*.pyo
+*.pyd
 
-# Environment variables
-.env*
-
-# Models
-models/ # Ignore the directory containing downloaded model files
-
-# Virtual Environment
-venv/
-
-# Uploaded and processed files
-uploads/
+# Output folders
 output_videos/
+uploads/
 
-# Machine Learning Models
-*.pt
-*.onnx
-*.pkl
-
-# IDE and editor files
+# IDE / Editor specific
 .vscode/
 .idea/
+*.swp
