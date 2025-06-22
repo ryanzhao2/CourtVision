@@ -1,0 +1,16 @@
+{
+  "events": [],
+  "summary": {
+    "total_events": 0,
+    "event_counts": {},
+    "team_stats": {
+      "team_1": {},
+      "team_2": {}
+    }
+  },
+  "metadata": {
+    "fps": 29.97002997002997,
+    "total_events": 0,
+    "video_duration": 53.78706666666667
+  }
+}
