@@ -36,9 +36,6 @@ const HomePage: React.FC = () => {
                   <Link to="/signup" className="btn btn-primary btn-large">
                     Start Analyzing
                   </Link>
-                  <Link to="/demo" className="btn btn-outline btn-large">
-                    Watch Demo
-                  </Link>
                 </div>
               </div>
               <div className="hero-image">
