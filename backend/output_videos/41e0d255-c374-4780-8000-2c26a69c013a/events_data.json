@@ -1,0 +1,28 @@
+{
+  "events": [
+    {
+      "type": "interception",
+      "timestamp": 3.7333333333333334,
+      "frame": 112,
+      "team": 2,
+      "description": "Team 2 interception"
+    }
+  ],
+  "summary": {
+    "total_events": 1,
+    "event_counts": {
+      "interception": 1
+    },
+    "team_stats": {
+      "team_1": {},
+      "team_2": {
+        "interception": 1
+      }
+    },
+    "video_duration": 0.03333333333333333
+  },
+  "metadata": {
+    "fps": 30.0,
+    "total_events": 1
+  }
+}

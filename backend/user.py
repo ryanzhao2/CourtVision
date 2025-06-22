@@ -11,6 +11,11 @@ import sys
 import signal
 import psutil
 import atexit
+import time
+import uuid
+import json
+from werkzeug.utils import secure_filename
+import cv2
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'your-secret-key-change-this-in-production')
@@ -19,8 +24,10 @@ CORS(app, origins=["http://localhost:5173", "http://127.0.0.1:5173"], supports_c
 # JWT token expiration time (24 hours)
 JWT_EXPIRATION_HOURS = 24
 
-# Global variable to track the OpenCV analysis process
+# Global variables for analysis data
 opencv_process = None
+analysis_sessions = {}  # Store analysis session data
+current_session_id = None
 
 def generate_token(user_id, email):
     """Generate JWT token for user"""
@@ -213,6 +220,9 @@ def launch_desktop_app():
         if opencv_process is not None and opencv_process.poll() is None:
             return jsonify({'error': 'Analysis is already running'}), 400
         
+        # Create a new webcam session
+        session_id = create_session('webcam')
+        
         # Launch the Python script with backend webcam
         # Use subprocess.Popen to run it in the background
         opencv_process = subprocess.Popen([sys.executable, script_path], 
@@ -224,6 +234,7 @@ def launch_desktop_app():
             'success': True,
             'message': 'Basketball analysis launched successfully with backend webcam',
             'pid': opencv_process.pid,
+            'session_id': session_id,
             'note': 'The analysis window will open on your desktop. Press q to quit.'
         })
         
@@ -233,7 +244,7 @@ def launch_desktop_app():
 @app.route('/api/kill-desktop-app', methods=['POST'])
 def kill_desktop_app():
     """Kill the running person_ball_detection.py process"""
-    global opencv_process
+    global opencv_process, current_session_id
     
     try:
         if opencv_process is None:
@@ -242,6 +253,10 @@ def kill_desktop_app():
         # Check if process is still running
         if opencv_process.poll() is not None:
             opencv_process = None
+            # Finalize the session
+            if current_session_id and current_session_id in analysis_sessions:
+                analysis_sessions[current_session_id]['status'] = 'completed'
+                analysis_sessions[current_session_id]['duration'] = time.time() - float(current_session_id.split('_')[1])
             return jsonify({'error': 'Analysis process has already ended'}), 404
         
         # Kill the process and its children
@@ -267,25 +282,36 @@ def kill_desktop_app():
                 # Force kill if it doesn't terminate gracefully
                 parent.kill()
             
+            # Finalize the session
+            if current_session_id and current_session_id in analysis_sessions:
+                analysis_sessions[current_session_id]['status'] = 'completed'
+                analysis_sessions[current_session_id]['duration'] = time.time() - float(current_session_id.split('_')[1])
+            
             opencv_process = None
             
             return jsonify({
                 'success': True,
-                'message': 'Analysis process terminated successfully'
+                'message': 'Analysis process terminated successfully',
+                'session_id': current_session_id
             })
             
         except psutil.NoSuchProcess:
             opencv_process = None
+            # Finalize the session
+            if current_session_id and current_session_id in analysis_sessions:
+                analysis_sessions[current_session_id]['status'] = 'completed'
             return jsonify({
                 'success': True,
-                'message': 'Analysis process was already terminated'
+                'message': 'Analysis process was already terminated',
+                'session_id': current_session_id
             })
         
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/analysis-status', methods=['GET'])
-def get_analysis_status():
+@token_required
+def get_analysis_status(current_user):
     """Get the current status of the analysis process"""
     global opencv_process
     
@@ -331,6 +357,442 @@ def cleanup_process():
 
 # Register cleanup function to run on app shutdown
 atexit.register(cleanup_process)
+
+@app.route('/api/analysis-data/<session_id>', methods=['GET'])
+def get_analysis_data(session_id):
+    """Get analysis data for a specific session"""
+    try:
+        if session_id not in analysis_sessions:
+            return jsonify({'error': 'Session not found'}), 404
+        
+        session_data = analysis_sessions[session_id]
+        return jsonify(session_data)
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/analysis-completion-stats/<session_id>', methods=['GET'])
+def get_completion_stats(session_id):
+    """Get completion statistics for analysis session"""
+    try:
+        if session_id not in analysis_sessions:
+            return jsonify({'error': 'Session not found'}), 404
+        
+        session_data = analysis_sessions[session_id]
+        
+        # Calculate stats based on session type
+        if session_data.get('type') == 'webcam':
+            # For webcam sessions, use real-time data
+            events = session_data.get('events', [])
+            duration = session_data.get('duration', 0)
+            
+            stats = {
+                'events_found': len(events),
+                'duration': format_duration(duration),
+                'violations': len([e for e in events if e.get('severity') == 'error']),
+                'warnings': len([e for e in events if e.get('severity') == 'warning']),
+                'good_plays': len([e for e in events if e.get('severity') == 'info']),
+                'session_type': 'webcam'
+            }
+        else:
+            # For uploaded video sessions, use processed data
+            events = session_data.get('events', [])
+            duration = session_data.get('video_duration', 0)
+            
+            stats = {
+                'events_found': len(events),
+                'duration': format_duration(duration),
+                'violations': len([e for e in events if e.get('severity') == 'error']),
+                'warnings': len([e for e in events if e.get('severity') == 'warning']),
+                'good_plays': len([e for e in events if e.get('severity') == 'info']),
+                'session_type': 'upload'
+            }
+        
+        return jsonify(stats)
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/analysis-results/<session_id>', methods=['GET'])
+def get_analysis_results(session_id):
+    """Get detailed analysis results for a session"""
+    try:
+        if session_id not in analysis_sessions:
+            return jsonify({'error': 'Session not found'}), 404
+        
+        session_data = analysis_sessions[session_id]
+        
+        # Format events for frontend
+        events = []
+        for i, event in enumerate(session_data.get('events', [])):
+            events.append({
+                'id': str(i + 1),
+                'timestamp': event.get('timestamp', 0),
+                'type': event.get('type', 'Event'),
+                'title': event.get('title', event.get('description', 'Unknown Event')),
+                'description': event.get('description', ''),
+                'severity': event.get('severity', 'info')
+            })
+        
+        results = {
+            'events': events,
+            'video_source': session_data.get('video_source', 'test.mp4'),
+            'session_type': session_data.get('type', 'upload'),
+            'analysis_date': session_data.get('created_at', ''),
+            'total_events': len(events),
+            'duration': session_data.get('video_duration', 0)
+        }
+        
+        return jsonify(results)
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/current-session', methods=['GET'])
+def get_current_session():
+    """Get the current active session ID"""
+    try:
+        return jsonify({
+            'session_id': current_session_id,
+            'has_session': current_session_id is not None
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+def format_duration(seconds):
+    """Format duration in seconds to MM:SS format"""
+    if not seconds:
+        return "00:00"
+    mins = int(seconds // 60)
+    secs = int(seconds % 60)
+    return f"{mins:02d}:{secs:02d}"
+
+def create_session(session_type, video_source=None):
+    """Create a new analysis session"""
+    global current_session_id
+    
+    session_id = f"session_{int(time.time())}"
+    current_session_id = session_id
+    
+    analysis_sessions[session_id] = {
+        'id': session_id,
+        'type': session_type,
+        'video_source': video_source,
+        'events': [],
+        'duration': 0,
+        'video_duration': 0,
+        'created_at': time.strftime('%Y-%m-%d %H:%M:%S'),
+        'status': 'active'
+    }
+    
+    return session_id
+
+def update_session_data(session_id, data):
+    """Update session data with new analysis results"""
+    if session_id in analysis_sessions:
+        analysis_sessions[session_id].update(data)
+
+@app.route('/api/simulate-video-analysis', methods=['POST'])
+def simulate_video_analysis():
+    """Simulate video upload analysis with sample data"""
+    try:
+        data = request.get_json()
+        video_filename = data.get('filename', 'test.mp4')
+        
+        # Create a new upload session
+        session_id = create_session('upload', video_filename)
+        
+        # Simulate analysis delay
+        time.sleep(2)
+        
+        # Create sample analysis events
+        sample_events = [
+            {
+                'timestamp': 45,
+                'type': 'Foul',
+                'title': 'Personal Foul',
+                'description': 'Pushing foul committed by Player #23',
+                'severity': 'warning'
+            },
+            {
+                'timestamp': 128,
+                'type': 'Violation',
+                'title': 'Double Dribble',
+                'description': 'Player #15 committed a double dribble violation',
+                'severity': 'error'
+            },
+            {
+                'timestamp': 245,
+                'type': 'Good Play',
+                'title': 'Steal',
+                'description': 'Clean steal executed by Player #8',
+                'severity': 'info'
+            },
+            {
+                'timestamp': 367,
+                'type': 'Foul',
+                'title': 'Traveling',
+                'description': 'Traveling violation by Player #12',
+                'severity': 'warning'
+            },
+            {
+                'timestamp': 456,
+                'type': 'Good Play',
+                'title': 'Three-Point Shot',
+                'description': 'Successful three-point shot by Player #7',
+                'severity': 'info'
+            },
+            {
+                'timestamp': 589,
+                'type': 'Violation',
+                'title': 'Out of Bounds',
+                'description': 'Ball went out of bounds, turnover',
+                'severity': 'error'
+            },
+            {
+                'timestamp': 723,
+                'type': 'Good Play',
+                'title': 'Assist',
+                'description': 'Great assist leading to a score',
+                'severity': 'info'
+            },
+            {
+                'timestamp': 834,
+                'type': 'Foul',
+                'title': 'Blocking Foul',
+                'description': 'Illegal blocking foul by Player #19',
+                'severity': 'warning'
+            }
+        ]
+        
+        # Update session with analysis results
+        update_session_data(session_id, {
+            'events': sample_events,
+            'video_duration': 930,  # 15:30 in seconds
+            'status': 'completed'
+        })
+        
+        return jsonify({
+            'success': True,
+            'message': 'Video analysis completed successfully',
+            'session_id': session_id,
+            'events_found': len(sample_events),
+            'duration': '15:30'
+        })
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/analyze', methods=['POST'])
+@token_required
+def analyze_video(current_user):
+    """
+    Analyze a basketball video and return results.
+    
+    Expected form data:
+    - video: Video file
+    - max_frames: (optional) Maximum frames to process for faster testing
+    """
+    try:
+        if 'video' not in request.files:
+            return jsonify({'error': 'No video file provided'}), 400
+        
+        video_file = request.files['video']
+        if video_file.filename == '':
+            return jsonify({'error': 'No video file selected'}), 400
+        
+        if not allowed_file(video_file.filename):
+            return jsonify({'error': 'Invalid file type. Allowed: mp4, avi, mov, mkv'}), 400
+        
+        max_frames = request.form.get('max_frames', None)
+        if max_frames:
+            try:
+                max_frames = int(max_frames)
+            except ValueError:
+                return jsonify({'error': 'max_frames must be an integer'}), 400
+        
+        session_id = str(uuid.uuid4())
+        session_folder = os.path.join('output_videos', session_id)
+        os.makedirs(session_folder, exist_ok=True)
+        
+        filename = secure_filename(video_file.filename)
+        input_path = os.path.join(session_folder, filename)
+        video_file.save(input_path)
+        
+        output_video_path = os.path.join(session_folder, 'analyzed_video.mp4')
+        events_data_path = os.path.join(session_folder, 'events_data.json')
+        
+        cmd = [sys.executable, 'main.py', input_path, '--output_video', output_video_path]
+        if max_frames:
+            cmd.extend(['--max_frames', str(max_frames)])
+        
+        result = subprocess.run(cmd, capture_output=True, text=True, cwd=os.getcwd())
+        
+        if result.returncode != 0:
+            return jsonify({
+                'error': 'Analysis failed',
+                'stderr': result.stderr,
+                'stdout': result.stdout
+            }), 500
+        
+        # Check if output video was created
+        if not os.path.exists(output_video_path):
+            return jsonify({
+                'error': 'Analysis completed but output video not found',
+                'stdout': result.stdout,
+                'stderr': result.stderr
+            }), 500
+        
+        if not os.path.exists(events_data_path):
+            return jsonify({
+                'error': 'Analysis completed but events data not found',
+                'stdout': result.stdout
+            }), 500
+        
+        with open(events_data_path, 'r') as f:
+            events_data = json.load(f)
+        
+        # Calculate actual video duration from the processed video
+        video_duration = get_video_duration(output_video_path)
+        
+        # Fallback: try to get duration from events data if video duration is 0
+        if video_duration == 0 and 'metadata' in events_data and 'video_duration' in events_data['metadata']:
+            video_duration = events_data['metadata']['video_duration']
+        
+        # Ensure events have proper timestamps
+        if 'events' in events_data and events_data['events']:
+            for event in events_data['events']:
+                if 'timestamp' not in event or event['timestamp'] is None:
+                    # Calculate timestamp from frame number if available
+                    if 'frame' in event and 'metadata' in events_data and 'fps' in events_data['metadata']:
+                        fps = events_data['metadata']['fps']
+                        event['timestamp'] = event['frame'] / fps if fps > 0 else 0
+                    else:
+                        event['timestamp'] = 0
+        
+        print(f"Video duration: {video_duration:.2f} seconds")
+        print(f"Number of events: {len(events_data.get('events', []))}")
+        if events_data.get('events'):
+            print("Sample events:")
+            for i, event in enumerate(events_data['events'][:5]):  # Show first 5 events
+                print(f"  {i+1}. {event.get('type', 'unknown')} at {event.get('timestamp', 0):.2f}s - {event.get('description', 'No description')}")
+        
+        return jsonify({
+            'success': True,
+            'session_id': session_id,
+            'events': events_data,
+            'output_video_url': f'/processed_video/{session_id}/analyzed_video.mp4',
+            'video_duration': video_duration,
+            'message': 'Analysis completed successfully'
+        })
+        
+    except Exception as e:
+        return jsonify({'error': f'Server error: {str(e)}'}), 500
+
+@app.route('/processed_video/<session_id>/<filename>', methods=['OPTIONS'])
+def serve_processed_video_options(session_id, filename):
+    response = jsonify({'message': 'OK'})
+    response.headers['Access-Control-Allow-Origin'] = '*'
+    response.headers['Access-Control-Allow-Methods'] = 'GET, OPTIONS'
+    response.headers['Access-Control-Allow-Headers'] = 'Authorization, Content-Type'
+    return response
+
+@app.route('/processed_video/<session_id>/<filename>', methods=['GET'])
+def serve_processed_video(session_id, filename):
+    # Check for token in query parameters first, then in headers
+    token = request.args.get('token')
+    if not token:
+        auth_header = request.headers.get('Authorization')
+        if auth_header and auth_header.startswith('Bearer '):
+            token = auth_header.split(' ')[1]
+    
+    if not token:
+        return jsonify({'error': 'No token provided'}), 401
+    
+    try:
+        # Verify token
+        payload = jwt.decode(token, app.config['SECRET_KEY'], algorithms=['HS256'])
+        user = get_user(payload['email'])
+        if not user:
+            return jsonify({'error': 'Invalid token'}), 401
+    except jwt.ExpiredSignatureError:
+        return jsonify({'error': 'Token expired'}), 401
+    except jwt.InvalidTokenError:
+        return jsonify({'error': 'Invalid token'}), 401
+    
+    video_directory = os.path.join('output_videos', session_id)
+    video_path = os.path.join(video_directory, filename)
+    
+    if not os.path.exists(video_path):
+        return jsonify({'error': 'Video file not found'}), 404
+    
+    # Add CORS headers for video streaming
+    response = send_from_directory(video_directory, filename)
+    response.headers['Access-Control-Allow-Origin'] = '*'
+    response.headers['Access-Control-Allow-Methods'] = 'GET, OPTIONS'
+    response.headers['Access-Control-Allow-Headers'] = 'Authorization, Content-Type'
+    response.headers['Content-Type'] = 'video/mp4'
+    
+    return response
+
+@app.route('/sessions', methods=['GET'])
+@token_required
+def list_sessions(current_user):
+    try:
+        sessions = []
+        if os.path.exists('output_videos'):
+            for session_id in os.listdir('output_videos'):
+                session_path = os.path.join('output_videos', session_id)
+                if os.path.isdir(session_path):
+                    video_exists = os.path.exists(os.path.join(session_path, 'analyzed_video.mp4'))
+                    events_exists = os.path.exists(os.path.join(session_path, 'events_data.json'))
+                    
+                    if video_exists and events_exists:
+                        sessions.append({
+                            'session_id': session_id,
+                            'video_url': f'/processed_video/{session_id}/analyzed_video.mp4',
+                            'events_url': f'/events/{session_id}'
+                        })
+        
+        return jsonify({'sessions': sessions})
+        
+    except Exception as e:
+        return jsonify({'error': f'Server error: {str(e)}'}), 500
+
+@app.route('/cleanup/<session_id>', methods=['DELETE'])
+@token_required
+def cleanup_session(current_user, session_id):
+    try:
+        session_path = os.path.join('output_videos', session_id)
+        if not os.path.exists(session_path):
+            return jsonify({'error': 'Session not found'}), 404
+        
+        import shutil
+        shutil.rmtree(session_path)
+        
+        return jsonify({'message': f'Session {session_id} deleted successfully'})
+        
+    except Exception as e:
+        return jsonify({'error': f'Server error: {str(e)}'}), 500
+
+def get_video_duration(video_path):
+    """Get the duration of a video file in seconds."""
+    try:
+        cap = cv2.VideoCapture(video_path)
+        if cap.isOpened():
+            fps = cap.get(cv2.CAP_PROP_FPS)
+            frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+            duration = frame_count / fps if fps > 0 else 0
+            cap.release()
+            return duration
+    except Exception as e:
+        print(f"Warning: Could not get video duration from {video_path}: {e}")
+    return 0
+
+def allowed_file(filename):
+    """Check if the file has an allowed extension."""
+    ALLOWED_EXTENSIONS = {'mp4', 'avi', 'mov', 'mkv'}
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 if __name__ == "__main__":
     app.run(debug=True)

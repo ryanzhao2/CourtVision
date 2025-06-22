@@ -1,0 +1,6 @@
+STUBS_DEFAULT_PATH = 'stubs'
+PLAYER_DETECTOR_PATH = '../yolov8n.pt'
+BALL_DETECTOR_PATH = '../yolov8n.pt'
+COURT_KEYPOINT_DETECTOR_PATH = '../yolov8n.pt'
+OUTPUT_VIDEO_PATH = 'output_videos/output_video.mp4'
+HOOP_DETECTOR_PATH = '../yolov8n.pt'
