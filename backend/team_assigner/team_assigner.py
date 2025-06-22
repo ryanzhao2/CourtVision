@@ -130,8 +130,8 @@ class TeamAssigner:
         try:
             player_color = self.get_player_color_fast(frame, player_bbox)
             team_id = 2 if player_color == 'dark' else 1
-            self.player_team_dict[player_id] = team_id
-            return team_id
+        self.player_team_dict[player_id] = team_id
+        return team_id
         except Exception as e:
             # If classification fails, default to team 1
             self.player_team_dict[player_id] = 1

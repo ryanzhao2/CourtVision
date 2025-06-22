@@ -1,7 +1,7 @@
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 from werkzeug.security import generate_password_hash, check_password_hash
-from mongodb import create_user, get_user
+from mongodb import create_user, get_user, client
 import jwt
 import datetime
 import os
@@ -72,12 +72,7 @@ def health_check():
 
 @app.route("/signup", methods=["POST"])
 def signup():
-    print("Signup endpoint called")
-    print("Request headers:", dict(request.headers))
-    
     data = request.get_json()
-    print("Request data:", data)
-
     first_name = data.get("firstName")
     last_name = data.get("lastName")
     email = data.get("email")
@@ -89,37 +84,41 @@ def signup():
     if get_user(email):
         return jsonify({"error": "User already exists"}), 409
 
-    hashed_password = generate_password_hash(password)
+    hashed_password = generate_password_hash(password, method='pbkdf2:sha256')
 
+    try:
     user_id = create_user(first_name, last_name, email, hashed_password)
     if user_id:
-        print("User created successfully:", user_id)
         return jsonify({"message": "User created successfully", "user_id": str(user_id)}), 201
     else:
-        print("Failed to create user")
         return jsonify({"error": "Failed to create user"}), 500
+    except Exception as e:
+        print(f"Error creating user in database: {e}")
+        return jsonify({"error": "Service unavailable. Please try again later."}), 503
 
 @app.route("/login", methods=["POST"])
 def login():
-    print("Login endpoint called")
-    
     data = request.get_json()
-    print("Login data:", data)
-
     email = data.get("email")
     password = data.get("password")
 
     if not email or not password:
         return jsonify({"error": "Email and password are required"}), 400
 
+    try:
     user = get_user(email)
-    if not user or not check_password_hash(user["password"], password):
+    except Exception as e:
+        print(f"Error connecting to database during login for {email}: {e}")
+        return jsonify({"error": "Service unavailable. Please try again later."}), 503
+
+    try:
+        if not user or not check_password_hash(user.get("password", ""), password):
+            return jsonify({"error": "Invalid email or password"}), 401
+    except Exception as e:
+        print(f"Password check failed for {email}: {e}")
         return jsonify({"error": "Invalid email or password"}), 401
 
-    # Generate JWT token
     token = generate_token(user["_id"], user["email"])
-    
-    print("Login successful for user:", user["email"])
     
     return jsonify({
         "message": f"Welcome, {user['first_name']}!",
@@ -157,30 +156,19 @@ def get_profile(current_user):
 
 @app.route("/verify-token", methods=["POST"])
 def verify_token():
-    """Verify if a token is valid"""
     data = request.get_json()
     token = data.get("token")
-    
     if not token:
         return jsonify({"error": "Token is required"}), 400
-    
     try:
         payload = jwt.decode(token, app.config['SECRET_KEY'], algorithms=['HS256'])
         user = get_user(payload['email'])
-        
         if not user:
             return jsonify({"error": "User not found"}), 401
-        
-        return jsonify({
-            "valid": True,
-            "user": {
-                "id": str(user["_id"]),
-                "email": user["email"],
-                "firstName": user["first_name"],
-                "lastName": user["last_name"]
-            }
-        }), 200
-        
+        return jsonify({"valid": True, "user": {
+            "id": str(user["_id"]), "email": user["email"],
+            "firstName": user["first_name"], "lastName": user["last_name"]
+        }}), 200
     except jwt.ExpiredSignatureError:
         return jsonify({"valid": False, "error": "Token has expired"}), 401
     except jwt.InvalidTokenError:
@@ -333,4 +321,4 @@ def cleanup_process():
 atexit.register(cleanup_process)
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(host='0.0.0.0', port=5002, debug=True)
