@@ -308,7 +308,8 @@ def kill_desktop_app():
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/analysis-status', methods=['GET'])
-def get_analysis_status():
+@token_required
+def get_analysis_status(current_user):
     """Get the current status of the analysis process"""
     global opencv_process
     
@@ -701,10 +702,32 @@ def cleanup_session(current_user, session_id):
 @app.route('/api/analysis-status', methods=['GET'])
 @token_required
 def get_analysis_status(current_user):
+    """Get the current status of the analysis process"""
     global opencv_process
-    if opencv_process and opencv_process.poll() is None:
-        return jsonify({'running': True, 'pid': opencv_process.pid})
-    return jsonify({'running': False})
+    
+    try:
+        if opencv_process is None:
+            return jsonify({
+                'running': False,
+                'message': 'No analysis process is running'
+            })
+        
+        # Check if process is still running
+        if opencv_process.poll() is None:
+            return jsonify({
+                'running': True,
+                'pid': opencv_process.pid,
+                'message': 'Analysis is currently running'
+            })
+        else:
+            opencv_process = None
+            return jsonify({
+                'running': False,
+                'message': 'Analysis process has ended'
+            })
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 def allowed_file(filename):
     """Check if the file has an allowed extension."""
