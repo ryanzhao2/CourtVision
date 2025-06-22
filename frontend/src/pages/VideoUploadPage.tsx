@@ -2,8 +2,17 @@
 
 import type React from "react"
 import { useState, useRef } from "react"
-import { Link } from "react-router-dom"
-import { Upload, BarChart3, ArrowLeft, FileVideo, CheckCircle } from "lucide-react"
+import { Link, useNavigate } from "react-router-dom"
+import { Upload, BarChart3, ArrowLeft, FileVideo, CheckCircle, AlertCircle } from "lucide-react"
+import { useAuth } from "../context/AuthContext"
+
+interface AnalysisResponse {
+  success: boolean
+  session_id: string
+  events: any
+  output_video_url: string
+  message: string
+}
 
 const VideoUploadPage: React.FC = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
@@ -11,12 +20,17 @@ const VideoUploadPage: React.FC = () => {
   const [isUploading, setIsUploading] = useState(false)
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [analysisComplete, setAnalysisComplete] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [analysisData, setAnalysisData] = useState<AnalysisResponse | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const navigate = useNavigate()
+  const { token } = useAuth()
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (file && file.type.startsWith("video/")) {
       setSelectedFile(file)
+      setError(null)
     }
   }
 
@@ -25,6 +39,7 @@ const VideoUploadPage: React.FC = () => {
     const file = event.dataTransfer.files[0]
     if (file && file.type.startsWith("video/")) {
       setSelectedFile(file)
+      setError(null)
     }
   }
 
@@ -32,29 +47,65 @@ const VideoUploadPage: React.FC = () => {
     event.preventDefault()
   }
 
-  const simulateUpload = () => {
+  const uploadAndAnalyze = async () => {
+    if (!selectedFile) return
+
     setIsUploading(true)
+    setIsAnalyzing(true)
+    setError(null)
     setUploadProgress(0)
 
-    const interval = setInterval(() => {
-      setUploadProgress((prev) => {
-        if (prev >= 100) {
-          clearInterval(interval)
-          setIsUploading(false)
-          setIsAnalyzing(true)
-          simulateAnalysis()
-          return 100
+    const formData = new FormData()
+    formData.append('video', selectedFile)
+    formData.append('max_frames', '300') // Optional: limit frames for faster testing
+
+    try {
+      // Simulate upload progress
+      const progressInterval = setInterval(() => {
+        setUploadProgress(prev => {
+          if (prev >= 90) {
+            clearInterval(progressInterval)
+            return 90
         }
         return prev + 10
       })
     }, 200)
-  }
 
-  const simulateAnalysis = () => {
-    setTimeout(() => {
+      const response = await fetch('/api/analyze', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+        body: formData,
+      })
+
+      clearInterval(progressInterval)
+      setUploadProgress(100)
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        let detailedError = errorData.error || 'Upload failed'
+        if (errorData.stderr) {
+          detailedError += `:\n\n${errorData.stderr}`
+        }
+        throw new Error(detailedError)
+      }
+
+      const data: AnalysisResponse = await response.json()
+      
+      if (data.success) {
+        setAnalysisData(data)
+        setIsAnalyzing(false)
+        setAnalysisComplete(true)
+      } else {
+        throw new Error(data.message || 'Analysis failed')
+      }
+
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Upload failed')
+      setIsUploading(false)
       setIsAnalyzing(false)
-      setAnalysisComplete(true)
-    }, 3000)
+    }
   }
 
   const formatFileSize = (bytes: number) => {
@@ -63,6 +114,14 @@ const VideoUploadPage: React.FC = () => {
     const sizes = ["Bytes", "KB", "MB", "GB"]
     const i = Math.floor(Math.log(bytes) / Math.log(k))
     return Number.parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i]
+  }
+
+  const viewResults = () => {
+    if (analysisData) {
+      // Store the analysis data in localStorage for the results page
+      localStorage.setItem('analysisData', JSON.stringify(analysisData))
+      navigate('/analyze/results')
+    }
   }
 
   if (analysisComplete) {
@@ -92,19 +151,24 @@ const VideoUploadPage: React.FC = () => {
 
               <div className="completion-stats">
                 <div className="stat-item">
-                  <div className="stat-value">23</div>
+                  <div className="stat-value">{analysisData?.events?.summary?.total_events || 0}</div>
                   <div className="stat-label">Events Found</div>
                 </div>
                 <div className="stat-item">
-                  <div className="stat-value">15:30</div>
+                  <div className="stat-value">
+                    {analysisData?.events?.metadata?.video_duration 
+                      ? `${Math.floor(analysisData.events.metadata.video_duration / 60)}:${Math.floor(analysisData.events.metadata.video_duration % 60).toString().padStart(2, '0')}`
+                      : 'N/A'
+                    }
+                  </div>
                   <div className="stat-label">Duration</div>
                 </div>
               </div>
 
               <div className="completion-actions">
-                <Link to="/analyze/results" className="btn btn-primary btn-large">
+                <button onClick={viewResults} className="btn btn-primary btn-large">
                   View Analysis Results
-                </Link>
+                </button>
                 <button className="btn btn-outline" onClick={() => window.location.reload()}>
                   Analyze Another Video
                 </button>
@@ -197,10 +261,18 @@ const VideoUploadPage: React.FC = () => {
                     )}
 
                     {!isUploading && !isAnalyzing && (
-                      <button onClick={simulateUpload} className="btn btn-primary btn-full btn-large">
+                      <button onClick={uploadAndAnalyze} className="btn btn-primary btn-full btn-large">
                         Start Analysis
                       </button>
                     )}
+                  </div>
+                )}
+
+                {/* Error Display */}
+                {error && (
+                  <div className="error-message">
+                    <AlertCircle size={16} />
+                    <pre className="error-pre">{error}</pre>
                   </div>
                 )}
               </div>

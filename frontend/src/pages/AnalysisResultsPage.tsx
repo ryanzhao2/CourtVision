@@ -16,6 +16,7 @@ import {
   CheckCircle,
   Info,
 } from "lucide-react"
+import { useAuth } from "../context/AuthContext"
 
 interface AnalysisEvent {
   id: string
@@ -26,86 +27,108 @@ interface AnalysisEvent {
   severity: "info" | "warning" | "error"
 }
 
+interface AnalysisData {
+  success: boolean
+  session_id: string
+  events: {
+    events: Array<{
+      type: string
+      timestamp: number
+      frame: number
+      description: string
+      team?: number
+      player_id?: number
+    }>
+    summary: {
+      total_events: number
+      event_counts: Record<string, number>
+      team_stats: Record<string, Record<string, number>>
+    }
+    metadata: {
+      fps: number
+      total_events: number
+      video_duration?: number
+    }
+  }
+  output_video_url: string
+  message: string
+}
+
 const AnalysisResultsPage: React.FC = () => {
   const [isPlaying, setIsPlaying] = useState(false)
   const [currentTime, setCurrentTime] = useState(0)
   const [duration, setDuration] = useState(0)
   const [volume, setVolume] = useState(50)
   const [hoveredEvent, setHoveredEvent] = useState<AnalysisEvent | null>(null)
+  const [analysisData, setAnalysisData] = useState<AnalysisData | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const videoRef = useRef<HTMLVideoElement>(null)
+  const { token } = useAuth()
   
-  // Change this to your video file name (e.g., "my-video.mp4", "basketball-game.webm", etc.)
-  const videoSource = "test.mp4"
+  // Load analysis data from localStorage or fetch from backend
+  useEffect(() => {
+    const loadAnalysisData = async () => {
+      try {
+        // Try to get data from localStorage first
+        const storedData = localStorage.getItem('analysisData')
+        if (storedData) {
+          const data: AnalysisData = JSON.parse(storedData)
+          setAnalysisData(data)
+          setLoading(false)
+          return
+        }
 
-  const analysisEvents: AnalysisEvent[] = [
-    {
-      id: "1",
-      timestamp: 45,
-      type: "Foul",
-      title: "Personal Foul",
-      description: "Pushing foul committed by Player #23",
-      severity: "warning",
-    },
-    {
-      id: "2",
-      timestamp: 128,
-      type: "Violation",
-      title: "Double Dribble",
-      description: "Player #15 committed a double dribble violation",
-      severity: "error",
-    },
-    {
-      id: "3",
-      timestamp: 245,
-      type: "Good Play",
-      title: "Steal",
-      description: "Clean steal executed by Player #8",
-      severity: "info",
-    },
-    {
-      id: "4",
-      timestamp: 367,
-      type: "Foul",
-      title: "Traveling",
-      description: "Traveling violation by Player #12",
-      severity: "warning",
-    },
-    {
-      id: "5",
-      timestamp: 456,
-      type: "Good Play",
-      title: "Three-Point Shot",
-      description: "Successful three-point shot by Player #7",
-      severity: "info",
-    },
-    {
-      id: "6",
-      timestamp: 589,
-      type: "Violation",
-      title: "Out of Bounds",
-      description: "Ball went out of bounds, turnover",
-      severity: "error",
-    },
-    {
-      id: "7",
-      timestamp: 723,
-      type: "Good Play",
-      title: "Assist",
-      description: "Great assist leading to a score",
-      severity: "info",
-    },
-    {
-      id: "8",
-      timestamp: 834,
-      type: "Foul",
-      title: "Blocking Foul",
-      description: "Illegal blocking foul by Player #19",
-      severity: "warning",
-    },
-  ]
+        // If no stored data, try to fetch from backend
+        // You might want to pass session_id as a URL parameter
+        const urlParams = new URLSearchParams(window.location.search)
+        const sessionId = urlParams.get('session_id')
+        
+        if (sessionId) {
+          const response = await fetch(`/api/events/${sessionId}`)
+          if (response.ok) {
+            const eventsData = await response.json()
+            setAnalysisData({
+              success: true,
+              session_id: sessionId,
+              events: eventsData,
+              output_video_url: `/api/video/${sessionId}`,
+              message: 'Analysis loaded successfully'
+            })
+          } else {
+            throw new Error('Failed to load analysis data')
+          }
+        } else {
+          throw new Error('No analysis data found')
+        }
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to load analysis')
+      } finally {
+        setLoading(false)
+      }
+    }
 
-  // Calculate a stable duration for markers that doesn't change when video loads
-  const markerDuration = Math.max(930, Math.max(...analysisEvents.map(e => e.timestamp)) + 60) // Use 930 seconds (15:30) or max event time + 60s
+    loadAnalysisData()
+  }, [])
+
+  const videoUrl = analysisData 
+    ? `http://localhost:5001${analysisData.output_video_url}?token=${token}` 
+    : ""
+
+  // Convert backend events to frontend format
+  const analysisEvents: AnalysisEvent[] = analysisData?.events?.events?.map((event, index) => ({
+    id: index.toString(),
+    timestamp: event.timestamp,
+    type: event.type,
+    title: event.type.charAt(0).toUpperCase() + event.type.slice(1).replace('_', ' '),
+    description: event.description,
+    severity: event.type === 'travel' || event.type === 'double_dribble' ? 'error' : 
+              event.type === 'pass' || event.type === 'interception' ? 'warning' : 'info'
+  })) || []
+
+  // Calculate a stable duration for markers
+  const markerDuration = analysisData?.events?.metadata?.video_duration || 
+                        Math.max(930, Math.max(...analysisEvents.map(e => e.timestamp)) + 60)
 
   const togglePlayPause = () => {
     if (videoRef.current) {
@@ -210,6 +233,32 @@ const AnalysisResultsPage: React.FC = () => {
     }
   }, [])
 
+  if (loading) {
+    return (
+      <div className="results-page">
+        <div className="loading-container">
+          <div className="spinner"></div>
+          <p>Loading analysis results...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="results-page">
+        <div className="error-container">
+          <AlertTriangle size={48} className="text-red" />
+          <h2>Error Loading Results</h2>
+          <p>{error}</p>
+          <Link to="/analyze/upload" className="btn btn-primary">
+            Try Again
+          </Link>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="results-page">
       {/* Header */}
@@ -243,12 +292,8 @@ const AnalysisResultsPage: React.FC = () => {
                       className="video-placeholder"
                       controls={false}
                       preload="metadata"
+                      src={videoUrl}
                     >
-                      {/* Change the videoSource variable above to play your own video */}
-                      <source src={`http://127.0.0.1:5000/api/video/${videoSource}`} type="video/mp4" />
-                      {/* Fallback for different video formats */}
-                      <source src={`http://127.0.0.1:5000/api/video/${videoSource.replace('.mp4', '.webm')}`} type="video/webm" />
-                      <source src={`http://127.0.0.1:5000/api/video/${videoSource.replace('.mp4', '.ogg')}`} type="video/ogg" />
                       Your browser does not support the video tag.
                     </video>
 
@@ -339,18 +384,20 @@ const AnalysisResultsPage: React.FC = () => {
                 <div className="summary-stats">
                   <div className="stat-item">
                     <div className="stat-value error">
-                      {analysisEvents.filter((e) => e.severity === "error").length}
+                      {(analysisData?.events?.summary?.event_counts?.travel || 0) + 
+                       (analysisData?.events?.summary?.event_counts?.double_dribble || 0)}
                     </div>
-                    <div className="stat-label">Double Dribbles</div>
+                    <div className="stat-label">Violations</div>
                   </div>
                   <div className="stat-item">
                     <div className="stat-value warning">
-                      {analysisEvents.filter((e) => e.severity === "warning").length}
+                      {(analysisData?.events?.summary?.event_counts?.pass || 0) + 
+                       (analysisData?.events?.summary?.event_counts?.interception || 0)}
                     </div>
-                    <div className="stat-label">Travels</div>
+                    <div className="stat-label">Passes & Interceptions</div>
                   </div>
                   <div className="stat-item">
-                    <div className="stat-value total">{analysisEvents.length}</div>
+                    <div className="stat-value total">{analysisData?.events?.summary?.total_events || 0}</div>
                     <div className="stat-label">Total Events</div>
                   </div>
                 </div>
