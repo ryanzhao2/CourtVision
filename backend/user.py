@@ -12,6 +12,8 @@ import signal
 import psutil
 import atexit
 import time
+import uuid
+from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'your-secret-key-change-this-in-production')
@@ -577,6 +579,137 @@ def simulate_video_analysis():
         
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+@app.route('/api/analyze', methods=['POST'])
+@token_required
+def analyze_video(current_user):
+    """
+    Analyze a basketball video and return results.
+    
+    Expected form data:
+    - video: Video file
+    - max_frames: (optional) Maximum frames to process for faster testing
+    """
+    try:
+        if 'video' not in request.files:
+            return jsonify({'error': 'No video file provided'}), 400
+        
+        video_file = request.files['video']
+        if video_file.filename == '':
+            return jsonify({'error': 'No video file selected'}), 400
+        
+        if not allowed_file(video_file.filename):
+            return jsonify({'error': 'Invalid file type. Allowed: mp4, avi, mov, mkv'}), 400
+        
+        max_frames = request.form.get('max_frames', None)
+        if max_frames:
+            try:
+                max_frames = int(max_frames)
+            except ValueError:
+                return jsonify({'error': 'max_frames must be an integer'}), 400
+        
+        session_id = str(uuid.uuid4())
+        session_folder = os.path.join('output_videos', session_id)
+        os.makedirs(session_folder, exist_ok=True)
+        
+        filename = secure_filename(video_file.filename)
+        input_path = os.path.join(session_folder, filename)
+        video_file.save(input_path)
+        
+        output_video_path = os.path.join(session_folder, 'analyzed_video.mp4')
+        events_data_path = os.path.join(session_folder, 'events_data.json')
+        
+        cmd = [sys.executable, 'main.py', input_path, '--output_video', output_video_path]
+        if max_frames:
+            cmd.extend(['--max_frames', str(max_frames)])
+        
+        result = subprocess.run(cmd, capture_output=True, text=True, cwd=os.getcwd())
+        
+        if result.returncode != 0:
+            return jsonify({
+                'error': 'Analysis failed',
+                'stderr': result.stderr,
+                'stdout': result.stdout
+            }), 500
+        
+        if not os.path.exists(events_data_path):
+            return jsonify({
+                'error': 'Analysis completed but events data not found',
+                'stdout': result.stdout
+            }), 500
+        
+        with open(events_data_path, 'r') as f:
+            events_data = json.load(f)
+        
+        return jsonify({
+            'success': True,
+            'session_id': session_id,
+            'events': events_data,
+            'output_video_url': f'/processed_video/{session_id}/analyzed_video.mp4',
+            'message': 'Analysis completed successfully'
+        })
+        
+    except Exception as e:
+        return jsonify({'error': f'Server error: {str(e)}'}), 500
+
+@app.route('/processed_video/<session_id>/<filename>', methods=['GET'])
+@token_required
+def serve_processed_video(current_user, session_id, filename):
+    video_directory = os.path.join('output_videos', session_id)
+    return send_from_directory(video_directory, filename)
+
+@app.route('/sessions', methods=['GET'])
+@token_required
+def list_sessions(current_user):
+    try:
+        sessions = []
+        if os.path.exists('output_videos'):
+            for session_id in os.listdir('output_videos'):
+                session_path = os.path.join('output_videos', session_id)
+                if os.path.isdir(session_path):
+                    video_exists = os.path.exists(os.path.join(session_path, 'analyzed_video.mp4'))
+                    events_exists = os.path.exists(os.path.join(session_path, 'events_data.json'))
+                    
+                    if video_exists and events_exists:
+                        sessions.append({
+                            'session_id': session_id,
+                            'video_url': f'/processed_video/{session_id}/analyzed_video.mp4',
+                            'events_url': f'/events/{session_id}'
+                        })
+        
+        return jsonify({'sessions': sessions})
+        
+    except Exception as e:
+        return jsonify({'error': f'Server error: {str(e)}'}), 500
+
+@app.route('/cleanup/<session_id>', methods=['DELETE'])
+@token_required
+def cleanup_session(current_user, session_id):
+    try:
+        session_path = os.path.join('output_videos', session_id)
+        if not os.path.exists(session_path):
+            return jsonify({'error': 'Session not found'}), 404
+        
+        import shutil
+        shutil.rmtree(session_path)
+        
+        return jsonify({'message': f'Session {session_id} deleted successfully'})
+        
+    except Exception as e:
+        return jsonify({'error': f'Server error: {str(e)}'}), 500
+
+@app.route('/api/analysis-status', methods=['GET'])
+@token_required
+def get_analysis_status(current_user):
+    global opencv_process
+    if opencv_process and opencv_process.poll() is None:
+        return jsonify({'running': True, 'pid': opencv_process.pid})
+    return jsonify({'running': False})
+
+def allowed_file(filename):
+    """Check if the file has an allowed extension."""
+    ALLOWED_EXTENSIONS = {'mp4', 'avi', 'mov', 'mkv'}
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 if __name__ == "__main__":
     app.run(debug=True)
