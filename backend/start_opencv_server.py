@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Startup script for the real-time basketball analysis WebSocket server.
-This script initializes the WebSocket server that handles live video analysis.
+Startup script for the OpenCV basketball analysis server.
+This server integrates with person_ball_detection.py for real-time video analysis.
 """
 
 import asyncio
@@ -13,7 +13,7 @@ from pathlib import Path
 # Add the current directory to Python path
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-from realtime_analysis import start_websocket_server
+from opencv_server import start_websocket_server
 
 # Set up logging
 logging.basicConfig(
@@ -21,17 +21,18 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
         logging.StreamHandler(sys.stdout),
-        logging.FileHandler('realtime_server.log')
+        logging.FileHandler('opencv_server.log')
     ]
 )
 
 logger = logging.getLogger(__name__)
 
 async def main():
-    """Main function to start the WebSocket server."""
+    """Main function to start the OpenCV WebSocket server."""
     try:
-        logger.info("Starting Basketball Analysis WebSocket Server...")
+        logger.info("Starting OpenCV Basketball Analysis Server...")
         logger.info("Server will be available at ws://localhost:8765")
+        logger.info("This server integrates with person_ball_detection.py")
         logger.info("Press Ctrl+C to stop the server")
         
         # Start the WebSocket server

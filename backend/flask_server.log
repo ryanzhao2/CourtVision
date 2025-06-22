@@ -1,0 +1,102 @@
+2025-06-21 21:39:46,052 - __main__ - INFO - Starting Flask Authentication Server...
+2025-06-21 21:39:46,052 - __main__ - INFO - Server will be available at http://localhost:5000
+2025-06-21 21:39:46,052 - __main__ - INFO - Press Ctrl+C to stop the server
+2025-06-21 21:41:33,148 - __main__ - INFO - Starting Flask Authentication Server...
+2025-06-21 21:41:33,149 - __main__ - INFO - Server will be available at http://localhost:5001
+2025-06-21 21:41:33,149 - __main__ - INFO - Press Ctrl+C to stop the server
+2025-06-21 21:41:33,264 - werkzeug - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5001
+ * Running on http://10.200.7.50:5001
+2025-06-21 21:41:33,265 - werkzeug - INFO - [33mPress CTRL+C to quit[0m
+2025-06-21 21:41:33,265 - werkzeug - INFO -  * Restarting with stat
+2025-06-21 21:41:33,475 - __main__ - INFO - Starting Flask Authentication Server...
+2025-06-21 21:41:33,475 - __main__ - INFO - Server will be available at http://localhost:5001
+2025-06-21 21:41:33,475 - __main__ - INFO - Press Ctrl+C to stop the server
+2025-06-21 21:41:33,478 - werkzeug - WARNING -  * Debugger is active!
+2025-06-21 21:41:33,485 - werkzeug - INFO -  * Debugger PIN: 346-256-859
+2025-06-21 21:41:37,339 - __main__ - INFO - Starting Flask Authentication Server...
+2025-06-21 21:41:37,339 - __main__ - INFO - Server will be available at http://localhost:5001
+2025-06-21 21:41:37,339 - __main__ - INFO - Press Ctrl+C to stop the server
+2025-06-21 21:41:47,580 - werkzeug - INFO -  * Detected change in '/Users/manankakkar/spurhacks-1/backend/start_flask_server.py', reloading
+2025-06-21 21:41:48,069 - werkzeug - INFO -  * Restarting with stat
+2025-06-21 21:41:48,521 - __main__ - INFO - Starting Flask Authentication Server...
+2025-06-21 21:41:48,521 - __main__ - INFO - Server will be available at http://localhost:5002
+2025-06-21 21:41:48,521 - __main__ - INFO - Press Ctrl+C to stop the server
+2025-06-21 21:41:48,524 - werkzeug - WARNING -  * Debugger is active!
+2025-06-21 21:41:48,529 - werkzeug - INFO -  * Debugger PIN: 346-256-859
+2025-06-21 21:43:34,246 - werkzeug - INFO -  * Detected change in '/Users/manankakkar/spurhacks-1/backend/start_flask_server.py', reloading
+2025-06-21 21:43:34,907 - werkzeug - INFO -  * Restarting with stat
+2025-06-21 21:43:35,759 - __main__ - INFO - Starting Flask Authentication Server...
+2025-06-21 21:43:35,759 - __main__ - INFO - Server will be available at http://localhost:5002
+2025-06-21 21:43:35,760 - __main__ - INFO - Press Ctrl+C to stop the server
+2025-06-21 21:43:35,764 - werkzeug - WARNING -  * Debugger is active!
+2025-06-21 21:43:35,772 - werkzeug - INFO -  * Debugger PIN: 346-256-859
+2025-06-21 21:47:06,239 - werkzeug - INFO -  * Detected change in '/Users/manankakkar/spurhacks-1/backend/mongodb.py', reloading
+2025-06-21 21:47:06,601 - werkzeug - INFO -  * Restarting with stat
+2025-06-21 21:47:31,237 - werkzeug - INFO -  * Restarting with stat
+2025-06-21 21:48:08,119 - werkzeug - INFO -  * Restarting with stat
+2025-06-21 21:51:37,391 - werkzeug - INFO -  * Restarting with stat
+2025-06-21 21:58:28,774 - __main__ - INFO - Starting Flask Authentication Server...
+2025-06-21 21:58:28,774 - __main__ - INFO - Server will be available at http://localhost:5002
+2025-06-21 21:58:28,774 - __main__ - INFO - Press Ctrl+C to stop the server
+2025-06-21 21:58:28,779 - werkzeug - WARNING -  * Debugger is active!
+2025-06-21 21:58:28,785 - werkzeug - INFO -  * Debugger PIN: 346-256-859
+2025-06-21 21:58:28,916 - werkzeug - INFO -  * Restarting with stat
+2025-06-21 21:58:29,165 - __main__ - INFO - Starting Flask Authentication Server...
+2025-06-21 21:58:29,165 - __main__ - INFO - Server will be available at http://localhost:5002
+2025-06-21 21:58:29,165 - __main__ - INFO - Press Ctrl+C to stop the server
+2025-06-21 21:58:29,169 - werkzeug - WARNING -  * Debugger is active!
+2025-06-21 21:58:29,174 - werkzeug - INFO -  * Debugger PIN: 346-256-859
+2025-06-21 22:03:32,342 - werkzeug - INFO -  * Detected change in '/Users/manankakkar/spurhacks-1/backend/opencv_server.py', reloading
+2025-06-21 22:03:32,811 - werkzeug - INFO -  * Restarting with stat
+2025-06-21 22:03:32,821 - werkzeug - INFO -  * Detected change in '/Users/manankakkar/spurhacks-1/backend/opencv_server.py', reloading
+2025-06-21 22:03:33,192 - __main__ - INFO - Starting Flask Authentication Server...
+2025-06-21 22:03:33,192 - __main__ - INFO - Server will be available at http://localhost:5002
+2025-06-21 22:03:33,192 - __main__ - INFO - Press Ctrl+C to stop the server
+2025-06-21 22:03:33,198 - werkzeug - WARNING -  * Debugger is active!
+2025-06-21 22:03:33,205 - werkzeug - INFO -  * Debugger PIN: 346-256-859
+2025-06-21 22:03:33,528 - __main__ - INFO - Starting Flask Authentication Server...
+2025-06-21 22:03:33,528 - __main__ - INFO - Server will be available at http://localhost:5002
+2025-06-21 22:03:33,528 - __main__ - INFO - Press Ctrl+C to stop the server
+2025-06-21 22:03:33,531 - werkzeug - WARNING -  * Debugger is active!
+2025-06-21 22:03:33,536 - werkzeug - INFO -  * Debugger PIN: 346-256-859
+2025-06-21 22:03:44,274 - werkzeug - INFO -  * Detected change in '/Users/manankakkar/spurhacks-1/backend/opencv_server.py', reloading
+2025-06-21 22:03:44,612 - werkzeug - INFO -  * Detected change in '/Users/manankakkar/spurhacks-1/backend/opencv_server.py', reloading
+2025-06-21 22:03:44,802 - werkzeug - INFO -  * Restarting with stat
+2025-06-21 22:03:45,065 - __main__ - INFO - Starting Flask Authentication Server...
+2025-06-21 22:03:45,066 - __main__ - INFO - Server will be available at http://localhost:5002
+2025-06-21 22:03:45,066 - __main__ - INFO - Press Ctrl+C to stop the server
+2025-06-21 22:03:45,069 - werkzeug - WARNING -  * Debugger is active!
+2025-06-21 22:03:45,074 - werkzeug - INFO -  * Debugger PIN: 346-256-859
+2025-06-21 22:03:45,457 - __main__ - INFO - Starting Flask Authentication Server...
+2025-06-21 22:03:45,457 - __main__ - INFO - Server will be available at http://localhost:5002
+2025-06-21 22:03:45,458 - __main__ - INFO - Press Ctrl+C to stop the server
+2025-06-21 22:03:45,460 - werkzeug - WARNING -  * Debugger is active!
+2025-06-21 22:03:45,465 - werkzeug - INFO -  * Debugger PIN: 346-256-859
+2025-06-21 22:03:54,524 - werkzeug - INFO -  * Detected change in '/Users/manankakkar/spurhacks-1/backend/start_opencv_server.py', reloading
+2025-06-21 22:03:55,128 - werkzeug - INFO -  * Detected change in '/Users/manankakkar/spurhacks-1/backend/start_opencv_server.py', reloading
+2025-06-21 22:03:55,306 - __main__ - INFO - Starting Flask Authentication Server...
+2025-06-21 22:03:55,306 - __main__ - INFO - Server will be available at http://localhost:5002
+2025-06-21 22:03:55,306 - __main__ - INFO - Press Ctrl+C to stop the server
+2025-06-21 22:03:55,309 - werkzeug - WARNING -  * Debugger is active!
+2025-06-21 22:03:55,314 - werkzeug - INFO -  * Debugger PIN: 346-256-859
+2025-06-21 22:03:55,489 - werkzeug - INFO -  * Restarting with stat
+2025-06-21 22:03:55,703 - __main__ - INFO - Starting Flask Authentication Server...
+2025-06-21 22:03:55,703 - __main__ - INFO - Server will be available at http://localhost:5002
+2025-06-21 22:03:55,703 - __main__ - INFO - Press Ctrl+C to stop the server
+2025-06-21 22:03:55,706 - werkzeug - WARNING -  * Debugger is active!
+2025-06-21 22:03:55,711 - werkzeug - INFO -  * Debugger PIN: 346-256-859
+2025-06-21 22:05:40,045 - werkzeug - INFO -  * Detected change in '/Users/manankakkar/spurhacks-1/backend/opencv_server.py', reloading
+2025-06-21 22:05:40,366 - werkzeug - INFO -  * Detected change in '/Users/manankakkar/spurhacks-1/backend/opencv_server.py', reloading
+2025-06-21 22:05:41,502 - werkzeug - INFO -  * Restarting with stat
+2025-06-21 22:05:43,206 - __main__ - INFO - Starting Flask Authentication Server...
+2025-06-21 22:05:43,210 - __main__ - INFO - Server will be available at http://localhost:5002
+2025-06-21 22:05:43,210 - __main__ - INFO - Press Ctrl+C to stop the server
+2025-06-21 22:05:43,213 - __main__ - INFO - Starting Flask Authentication Server...
+2025-06-21 22:05:43,213 - __main__ - INFO - Server will be available at http://localhost:5002
+2025-06-21 22:05:43,213 - __main__ - INFO - Press Ctrl+C to stop the server
+2025-06-21 22:05:43,268 - werkzeug - WARNING -  * Debugger is active!
+2025-06-21 22:05:43,270 - werkzeug - WARNING -  * Debugger is active!
+2025-06-21 22:05:43,613 - werkzeug - INFO -  * Debugger PIN: 346-256-859
+2025-06-21 22:05:43,613 - werkzeug - INFO -  * Debugger PIN: 346-256-859

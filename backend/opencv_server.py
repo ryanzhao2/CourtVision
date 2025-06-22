@@ -4,131 +4,56 @@ import base64
 import json
 import asyncio
 import websockets
-from ultralytics import YOLO
 import time
-from typing import Dict, List, Optional, Tuple
 import logging
+import sys
+import os
+from pathlib import Path
+
+# Add the opencv-test directory to the path
+sys.path.append(os.path.join(os.path.dirname(__file__), 'opencv-test'))
+
+# Import the existing person_ball_detection functions
+from person_ball_detection import (
+    is_person_holding_ball_with_hands,
+    get_person_center_from_pose,
+    detect_steps,
+    detect_traveling
+)
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-class BasketballAnalyzer:
+class BasketballAnalysisServer:
     def __init__(self):
-        """Initialize the basketball analyzer with YOLO models."""
+        """Initialize the basketball analysis server with YOLO models."""
         try:
-            # Load YOLO models
-            self.basketball_model = YOLO('opencv-test/basketballmodel.pt')
-            self.pose_model = YOLO('opencv-test/yolov8s-pose.pt')
+            from ultralytics import YOLO
+            
+            # Load YOLO models from the opencv-test directory
+            opencv_test_dir = os.path.join(os.path.dirname(__file__), 'opencv-test')
+            self.basketball_model = YOLO(os.path.join(opencv_test_dir, 'basketballmodel.pt'))
+            self.pose_model = YOLO(os.path.join(opencv_test_dir, 'yolov8s-pose.pt'))
+            
             logger.info("YOLO models loaded successfully")
             
-            # Initialize tracking variables
-            self.ball_positions: List[Optional[Tuple[float, float]]] = []
-            self.knee_positions: List[Optional[Tuple[float, float]]] = []
-            self.hip_positions: List[Optional[Tuple[float, float]]] = []
+            # Initialize tracking variables (same as in person_ball_detection.py)
+            self.ball_positions = []
+            self.knee_positions = []
+            self.hip_positions = []
             self.was_holding = False
-            self.current_holder: Optional[int] = None
+            self.current_holder = None
             self.holding_frames = 0
             self.traveling_detected = False
             self.last_announcement_time = 0
             
         except Exception as e:
-            logger.error(f"Error initializing BasketballAnalyzer: {e}")
+            logger.error(f"Error initializing BasketballAnalysisServer: {e}")
             raise
 
-    def is_person_holding_ball_with_hands(self, ball_box: Tuple[float, float, float, float], 
-                                        pose_keypoints: np.ndarray, threshold: float = 8) -> bool:
-        """Check if a person is holding the basketball based on ball being close to keypoints."""
-        if not ball_box or pose_keypoints is None:
-            return False
-        
-        bx1, by1, bx2, by2 = ball_box[:4]
-        ball_center_x = (bx1 + bx2) / 2
-        ball_center_y = (by1 + by2) / 2
-        
-        # Check if ANY keypoint is inside or extremely close to the ball's bounding box
-        for keypoint in pose_keypoints:
-            if keypoint[2] > 0.2:  # Very low confidence threshold
-                keypoint_x, keypoint_y = keypoint[0], keypoint[1]
-                
-                # Check if keypoint is inside the ball's bounding box
-                if bx1 <= keypoint_x <= bx2 and by1 <= keypoint_y <= by2:
-                    return True
-                
-                # Check if keypoint is extremely close to the ball's bounding box edges
-                nearest_x = max(bx1, min(keypoint_x, bx2))
-                nearest_y = max(by1, min(keypoint_y, by2))
-                
-                distance = np.sqrt((keypoint_x - nearest_x)**2 + (keypoint_y - nearest_y)**2)
-                
-                if distance < threshold:
-                    return True
-                
-                # Additional check: distance from keypoint to ball center
-                center_distance = np.sqrt((keypoint_x - ball_center_x)**2 + (keypoint_y - ball_center_y)**2)
-                if center_distance < threshold * 2:
-                    return True
-        
-        return False
-
-    def get_person_center_from_pose(self, pose_keypoints: np.ndarray) -> Optional[Tuple[float, float]]:
-        """Calculate the center position of a person based on pose keypoints."""
-        if pose_keypoints is None:
-            return None
-        
-        # Get all visible keypoints
-        visible_keypoints = []
-        for keypoint in pose_keypoints:
-            if keypoint[2] > 0.4:  # Confidence threshold
-                visible_keypoints.append([keypoint[0], keypoint[1]])
-        
-        if not visible_keypoints:
-            return None
-        
-        # Calculate center from visible keypoints
-        x_coords = [kp[0] for kp in visible_keypoints]
-        y_coords = [kp[1] for kp in visible_keypoints]
-        
-        center_x = sum(x_coords) / len(x_coords)
-        center_y = sum(y_coords) / len(y_coords)
-        
-        return (center_x, center_y)
-
-    def detect_traveling(self, ball_positions: List[Optional[Tuple[float, float]]], 
-                        knee_positions: List[Optional[Tuple[float, float]]], 
-                        holding_frames: int, travel_threshold: float = 600) -> bool:
-        """Detect traveling based on ball movement and position relative to knees."""
-        if len(ball_positions) < 10 or len(knee_positions) < 10 or holding_frames < 5:
-            return False
-        
-        # Check if ball is moving horizontally (X-direction)
-        recent_ball_positions = ball_positions[-10:]
-        ball_x_positions = [pos[0] for pos in recent_ball_positions if pos is not None]
-        
-        if len(ball_x_positions) < 5:
-            return False
-        
-        # Calculate horizontal movement of ball
-        min_x = min(ball_x_positions)
-        max_x = max(ball_x_positions)
-        horizontal_movement = max_x - min_x
-        
-        # Check if ball is above knee level
-        if knee_positions and knee_positions[-1] is not None:
-            current_ball_y = ball_positions[-1][1] if ball_positions[-1] is not None else 0
-            current_knee_y = knee_positions[-1][1]
-            
-            # Ball is above knees if ball Y is smaller than knee Y
-            ball_above_knees = current_ball_y < current_knee_y
-            
-            # Traveling detected if ball is above knees and moving horizontally more than threshold
-            if ball_above_knees and horizontal_movement > travel_threshold:
-                return True
-        
-        return False
-
-    def analyze_frame(self, frame: np.ndarray) -> Dict:
-        """Analyze a single frame and return detection results."""
+    def analyze_frame(self, frame):
+        """Analyze a single frame using the existing person_ball_detection logic."""
         try:
             # Detect basketballs using basketball model
             basketball_results = self.basketball_model(frame)
@@ -177,13 +102,13 @@ class BasketballAnalyzer:
                     if pose_result.keypoints is not None and len(pose_result.keypoints.data) > 0:
                         person_pose_keypoints = pose_result.keypoints.data[0]
                         
-                        if self.is_person_holding_ball_with_hands(ball_boxes[0], person_pose_keypoints):
+                        if is_person_holding_ball_with_hands(ball_boxes[0], person_pose_keypoints):
                             current_holding = True
                             current_holder_id = i
                             current_holder_pose = person_pose_keypoints
                             
                             # Get person center from pose keypoints
-                            current_person_center = self.get_person_center_from_pose(person_pose_keypoints)
+                            current_person_center = get_person_center_from_pose(person_pose_keypoints)
                             
                             # Get knee and hip positions for step counting
                             left_knee = person_pose_keypoints[13] if len(person_pose_keypoints) > 13 and person_pose_keypoints[13][2] > 0.4 else None
@@ -231,7 +156,7 @@ class BasketballAnalyzer:
                 
                 # Check for traveling after some frames of holding
                 if self.holding_frames > 5 and not self.traveling_detected:
-                    if self.detect_traveling(self.ball_positions, self.knee_positions, self.holding_frames):
+                    if detect_traveling(self.ball_positions, self.knee_positions, self.holding_frames):
                         self.traveling_detected = True
                         events.append({
                             "type": "Violation",
@@ -276,8 +201,28 @@ class BasketballAnalyzer:
                 "ball_detected": len(ball_boxes) > 0,
                 "people_detected": len(pose_results),
                 "ball_boxes": ball_boxes,
-                "pose_results": len(pose_results)
+                "pose_results": len(pose_results),
+                "visual_data": {
+                    "ball_boxes": ball_boxes,
+                    "pose_keypoints": [],
+                    "current_holder_pose": None,
+                    "current_knee_pos": current_knee_pos,
+                    "current_hip_pos": current_hip_pos,
+                    "current_person_center": current_person_center
+                }
             }
+            
+            # Add pose keypoints for all detected people
+            if pose_results:
+                for pose_result in pose_results:
+                    if pose_result.keypoints is not None and len(pose_result.keypoints.data) > 0:
+                        # Convert keypoints to list format for JSON serialization
+                        keypoints = pose_result.keypoints.data[0].cpu().numpy().tolist()
+                        analysis_result["visual_data"]["pose_keypoints"].append(keypoints)
+                
+                # Add current holder's pose if available
+                if current_holder_pose is not None:
+                    analysis_result["visual_data"]["current_holder_pose"] = current_holder_pose.cpu().numpy().tolist()
             
             return analysis_result
             
@@ -288,21 +233,29 @@ class BasketballAnalyzer:
                 "error": str(e)
             }
 
-# Global analyzer instance
-analyzer = None
+# Global server instance
+analysis_server = None
 
 async def websocket_handler(websocket, path):
     """Handle WebSocket connections for real-time video analysis."""
-    global analyzer
+    global analysis_server
     
     try:
-        # Initialize analyzer if not already done
-        if analyzer is None:
-            analyzer = BasketballAnalyzer()
-            logger.info("Basketball analyzer initialized")
+        # Initialize server if not already done
+        if analysis_server is None:
+            analysis_server = BasketballAnalysisServer()
+            logger.info("Basketball analysis server initialized")
         
         logger.info(f"New WebSocket connection established")
         
+        # Send initial connection confirmation
+        await websocket.send(json.dumps({
+            "type": "connection",
+            "status": "connected",
+            "message": "Basketball analysis server ready"
+        }))
+        
+        # Keep connection alive and process messages
         async for message in websocket:
             try:
                 data = json.loads(message)
@@ -314,8 +267,8 @@ async def websocket_handler(websocket, path):
                     frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
                     
                     if frame is not None:
-                        # Analyze the frame
-                        analysis_result = analyzer.analyze_frame(frame)
+                        # Analyze the frame using the existing person_ball_detection logic
+                        analysis_result = analysis_server.analyze_frame(frame)
                         
                         # Send analysis results back
                         await websocket.send(json.dumps({
@@ -324,11 +277,23 @@ async def websocket_handler(websocket, path):
                         }))
                     else:
                         logger.warning("Failed to decode frame")
+                        await websocket.send(json.dumps({
+                            "type": "error",
+                            "message": "Failed to decode frame"
+                        }))
                         
             except json.JSONDecodeError as e:
                 logger.error(f"JSON decode error: {e}")
+                await websocket.send(json.dumps({
+                    "type": "error",
+                    "message": f"Invalid JSON: {str(e)}"
+                }))
             except Exception as e:
                 logger.error(f"Error processing message: {e}")
+                await websocket.send(json.dumps({
+                    "type": "error",
+                    "message": f"Processing error: {str(e)}"
+                }))
                 
     except websockets.exceptions.ConnectionClosed:
         logger.info("WebSocket connection closed")
@@ -337,7 +302,8 @@ async def websocket_handler(websocket, path):
 
 async def start_websocket_server(host="localhost", port=8765):
     """Start the WebSocket server."""
-    logger.info(f"Starting WebSocket server on {host}:{port}")
+    logger.info(f"Starting Basketball Analysis WebSocket Server on {host}:{port}")
+    logger.info("This server integrates with person_ball_detection.py for real-time analysis")
     async with websockets.serve(websocket_handler, host, port):
         await asyncio.Future()  # run forever
 
