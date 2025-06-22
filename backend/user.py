@@ -15,6 +15,7 @@ import time
 import uuid
 import json
 from werkzeug.utils import secure_filename
+import cv2
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'your-secret-key-change-this-in-production')
@@ -651,11 +652,37 @@ def analyze_video(current_user):
         with open(events_data_path, 'r') as f:
             events_data = json.load(f)
         
+        # Calculate actual video duration from the processed video
+        video_duration = get_video_duration(output_video_path)
+        
+        # Fallback: try to get duration from events data if video duration is 0
+        if video_duration == 0 and 'metadata' in events_data and 'video_duration' in events_data['metadata']:
+            video_duration = events_data['metadata']['video_duration']
+        
+        # Ensure events have proper timestamps
+        if 'events' in events_data and events_data['events']:
+            for event in events_data['events']:
+                if 'timestamp' not in event or event['timestamp'] is None:
+                    # Calculate timestamp from frame number if available
+                    if 'frame' in event and 'metadata' in events_data and 'fps' in events_data['metadata']:
+                        fps = events_data['metadata']['fps']
+                        event['timestamp'] = event['frame'] / fps if fps > 0 else 0
+                    else:
+                        event['timestamp'] = 0
+        
+        print(f"Video duration: {video_duration:.2f} seconds")
+        print(f"Number of events: {len(events_data.get('events', []))}")
+        if events_data.get('events'):
+            print("Sample events:")
+            for i, event in enumerate(events_data['events'][:5]):  # Show first 5 events
+                print(f"  {i+1}. {event.get('type', 'unknown')} at {event.get('timestamp', 0):.2f}s - {event.get('description', 'No description')}")
+        
         return jsonify({
             'success': True,
             'session_id': session_id,
             'events': events_data,
             'output_video_url': f'/processed_video/{session_id}/analyzed_video.mp4',
+            'video_duration': video_duration,
             'message': 'Analysis completed successfully'
         })
         
@@ -747,6 +774,20 @@ def cleanup_session(current_user, session_id):
         
     except Exception as e:
         return jsonify({'error': f'Server error: {str(e)}'}), 500
+
+def get_video_duration(video_path):
+    """Get the duration of a video file in seconds."""
+    try:
+        cap = cv2.VideoCapture(video_path)
+        if cap.isOpened():
+            fps = cap.get(cv2.CAP_PROP_FPS)
+            frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+            duration = frame_count / fps if fps > 0 else 0
+            cap.release()
+            return duration
+    except Exception as e:
+        print(f"Warning: Could not get video duration from {video_path}: {e}")
+    return 0
 
 def allowed_file(filename):
     """Check if the file has an allowed extension."""

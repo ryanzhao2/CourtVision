@@ -10,6 +10,7 @@ interface AnalysisResponse {
   session_id: string
   events: any
   output_video_url: string
+  video_duration: number
   message: string
 }
 
@@ -173,9 +174,11 @@ const VideoUploadPage: React.FC = () => {
                 </div>
                 <div className="stat-item">
                   <div className="stat-value">
-                    {analysisData?.events?.metadata?.video_duration 
-                      ? `${Math.floor(analysisData.events.metadata.video_duration / 60)}:${Math.floor(analysisData.events.metadata.video_duration % 60).toString().padStart(2, '0')}`
-                      : 'N/A'
+                    {analysisData?.video_duration 
+                      ? `${Math.floor(analysisData.video_duration / 60)}:${Math.floor(analysisData.video_duration % 60).toString().padStart(2, '0')}`
+                      : analysisData?.events?.metadata?.video_duration 
+                        ? `${Math.floor(analysisData.events.metadata.video_duration / 60)}:${Math.floor(analysisData.events.metadata.video_duration % 60).toString().padStart(2, '0')}`
+                        : 'N/A'
                     }
                   </div>
                   <div className="stat-label">Duration</div>

@@ -51,6 +51,10 @@ def main():
     video_frames, fps = read_video(args.input_video)
     print(f"✅ Video loaded: {len(video_frames)} frames at {fps:.2f} FPS")
     
+    # Calculate video duration
+    video_duration = len(video_frames) / fps if fps > 0 else 0
+    print(f"⏱️ Video duration: {video_duration:.2f} seconds")
+    
     # Limit frames for faster testing
     if args.max_frames and args.max_frames < len(video_frames):
         video_frames = video_frames[:args.max_frames]
@@ -147,6 +151,7 @@ def main():
     # Collect Events for Frontend
     print("📊 Collecting events for frontend...")
     event_collector = EventCollector(fps)
+    event_collector.set_video_duration(video_duration)
     event_collector.collect_violations(travels, double_dribbles)
     event_collector.collect_passes(passes)
     event_collector.collect_interceptions(interceptions)

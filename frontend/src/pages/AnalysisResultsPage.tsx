@@ -51,6 +51,7 @@ interface AnalysisData {
     }
   }
   output_video_url: string
+  video_duration: number
   message: string
 }
 
@@ -93,6 +94,7 @@ const AnalysisResultsPage: React.FC = () => {
               session_id: sessionId,
               events: eventsData,
               output_video_url: `/processed_video/${sessionId}/analyzed_video.mp4`,
+              video_duration: 0, // Assuming video_duration is not provided in the response
               message: 'Analysis loaded successfully'
             })
           } else {
@@ -127,7 +129,8 @@ const AnalysisResultsPage: React.FC = () => {
   })) || []
 
   // Calculate a stable duration for markers
-  const markerDuration = analysisData?.events?.metadata?.video_duration || 
+  const markerDuration = analysisData?.video_duration || 
+                        analysisData?.events?.metadata?.video_duration || 
                         Math.max(930, Math.max(...analysisEvents.map(e => e.timestamp)) + 60)
 
   const togglePlayPause = () => {

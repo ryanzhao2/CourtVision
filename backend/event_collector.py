@@ -15,6 +15,7 @@ class EventCollector:
         """
         self.fps = fps
         self.events = []
+        self.video_duration = 0  # Will be set later
     
     def _frame_to_timestamp(self, frame_num: int) -> float:
         """Convert frame number to timestamp in seconds."""
@@ -149,8 +150,7 @@ class EventCollector:
         return {
             'total_events': len(self.events),
             'event_counts': event_counts,
-            'team_stats': team_stats,
-            'video_duration': self._frame_to_timestamp(len(self.events)) if self.events else 0
+            'team_stats': team_stats
         }
     
     def export_to_json(self, filepath: str) -> None:
@@ -165,7 +165,8 @@ class EventCollector:
             'summary': self.get_summary_stats(),
             'metadata': {
                 'fps': self.fps,
-                'total_events': len(self.events)
+                'total_events': len(self.events),
+                'video_duration': self.video_duration
             }
         }
         
@@ -191,6 +192,11 @@ class EventCollector:
             },
             'metadata': {
                 'fps': self.fps,
-                'total_events': len(self.events)
+                'total_events': len(self.events),
+                'video_duration': self.video_duration
             }
-        } 
+        }
+    
+    def set_video_duration(self, duration: float) -> None:
+        """Set the video duration in seconds."""
+        self.video_duration = duration 
