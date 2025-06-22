@@ -8,6 +8,9 @@ import os
 from functools import wraps
 import subprocess
 import sys
+import signal
+import psutil
+import atexit
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'your-secret-key-change-this-in-production')
@@ -15,6 +18,9 @@ CORS(app, origins=["http://localhost:5173", "http://127.0.0.1:5173"], supports_c
 
 # JWT token expiration time (24 hours)
 JWT_EXPIRATION_HOURS = 24
+
+# Global variable to track the OpenCV analysis process
+opencv_process = None
 
 def generate_token(user_id, email):
     """Generate JWT token for user"""
@@ -193,6 +199,8 @@ def serve_video(filename):
 @app.route('/api/launch-desktop-app', methods=['POST'])
 def launch_desktop_app():
     """Launch the person_ball_detection.py desktop app with backend webcam"""
+    global opencv_process
+    
     try:
         # Path to the person_ball_detection.py script
         script_path = os.path.join(os.path.dirname(__file__), 'opencv-test', 'person_ball_detection.py')
@@ -201,22 +209,128 @@ def launch_desktop_app():
         if not os.path.exists(script_path):
             return jsonify({'error': 'person_ball_detection.py not found'}), 404
         
+        # Check if process is already running
+        if opencv_process is not None and opencv_process.poll() is None:
+            return jsonify({'error': 'Analysis is already running'}), 400
+        
         # Launch the Python script with backend webcam
         # Use subprocess.Popen to run it in the background
-        process = subprocess.Popen([sys.executable, script_path], 
-                                 cwd=os.path.dirname(script_path),
-                                 stdout=subprocess.PIPE,
-                                 stderr=subprocess.PIPE)
+        opencv_process = subprocess.Popen([sys.executable, script_path], 
+                                        cwd=os.path.dirname(script_path),
+                                        stdout=subprocess.PIPE,
+                                        stderr=subprocess.PIPE)
         
         return jsonify({
             'success': True,
             'message': 'Basketball analysis launched successfully with backend webcam',
-            'pid': process.pid,
+            'pid': opencv_process.pid,
             'note': 'The analysis window will open on your desktop. Press q to quit.'
         })
         
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+@app.route('/api/kill-desktop-app', methods=['POST'])
+def kill_desktop_app():
+    """Kill the running person_ball_detection.py process"""
+    global opencv_process
+    
+    try:
+        if opencv_process is None:
+            return jsonify({'error': 'No analysis process is running'}), 404
+        
+        # Check if process is still running
+        if opencv_process.poll() is not None:
+            opencv_process = None
+            return jsonify({'error': 'Analysis process has already ended'}), 404
+        
+        # Kill the process and its children
+        try:
+            # Get the process and all its children
+            parent = psutil.Process(opencv_process.pid)
+            children = parent.children(recursive=True)
+            
+            # Kill children first
+            for child in children:
+                try:
+                    child.terminate()
+                except psutil.NoSuchProcess:
+                    pass
+            
+            # Kill the parent process
+            parent.terminate()
+            
+            # Wait a bit for graceful termination
+            try:
+                parent.wait(timeout=3)
+            except psutil.TimeoutExpired:
+                # Force kill if it doesn't terminate gracefully
+                parent.kill()
+            
+            opencv_process = None
+            
+            return jsonify({
+                'success': True,
+                'message': 'Analysis process terminated successfully'
+            })
+            
+        except psutil.NoSuchProcess:
+            opencv_process = None
+            return jsonify({
+                'success': True,
+                'message': 'Analysis process was already terminated'
+            })
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/analysis-status', methods=['GET'])
+def get_analysis_status():
+    """Get the current status of the analysis process"""
+    global opencv_process
+    
+    try:
+        if opencv_process is None:
+            return jsonify({
+                'running': False,
+                'message': 'No analysis process is running'
+            })
+        
+        # Check if process is still running
+        if opencv_process.poll() is None:
+            return jsonify({
+                'running': True,
+                'pid': opencv_process.pid,
+                'message': 'Analysis is currently running'
+            })
+        else:
+            opencv_process = None
+            return jsonify({
+                'running': False,
+                'message': 'Analysis process has ended'
+            })
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+def cleanup_process():
+    """Clean up the OpenCV process if it's still running"""
+    global opencv_process
+    if opencv_process is not None:
+        try:
+            if opencv_process.poll() is None:  # Process is still running
+                opencv_process.terminate()
+                try:
+                    opencv_process.wait(timeout=5)
+                except subprocess.TimeoutExpired:
+                    opencv_process.kill()
+        except Exception as e:
+            print(f"Error cleaning up process: {e}")
+        finally:
+            opencv_process = None
+
+# Register cleanup function to run on app shutdown
+atexit.register(cleanup_process)
 
 if __name__ == "__main__":
     app.run(debug=True)
