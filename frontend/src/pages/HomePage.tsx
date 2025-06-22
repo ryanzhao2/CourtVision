@@ -129,7 +129,7 @@ const HomePage: React.FC = () => {
       {/* Footer */}
       <footer className="footer">
         <div className="container">
-          <p>&copy; 2024 CourtVision. All rights reserved.</p>
+          <p>&copy; 2025 CourtVision. All rights reserved.</p>
           <nav className="footer-nav">
             <Link to="/terms">Terms of Service</Link>
             <Link to="/privacy">Privacy</Link>
