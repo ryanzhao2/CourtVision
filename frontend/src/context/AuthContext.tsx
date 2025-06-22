@@ -44,7 +44,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const storedToken = localStorage.getItem('token');
       if (storedToken) {
         try {
-          const response = await fetch('/api/verify-token', {
+          const response = await fetch('http://127.0.0.1:5000/verify-token', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -90,7 +90,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setError(null);
 
     try {
-      const response = await fetch('/api/login', {
+      const response = await fetch('http://127.0.0.1:5000/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -124,7 +124,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setError(null);
 
     try {
-      const response = await fetch('/api/signup', {
+      const response = await fetch('http://127.0.0.1:5000/signup', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -155,7 +155,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     if (token) {
       try {
         // Call logout endpoint
-        await fetch('/api/logout', {
+        await fetch('http://127.0.0.1:5000/logout', {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${token}`,
