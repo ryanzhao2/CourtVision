@@ -119,7 +119,7 @@ class TeamAssigner:
         """
         # Use cached result if available
         if player_id in self.player_team_dict:
-          return self.player_team_dict[player_id]
+            return self.player_team_dict[player_id]
 
         # Only process if bbox is valid
         if len(player_bbox) != 4 or player_bbox[2] <= player_bbox[0] or player_bbox[3] <= player_bbox[1]:
@@ -130,8 +130,8 @@ class TeamAssigner:
         try:
             player_color = self.get_player_color_fast(frame, player_bbox)
             team_id = 2 if player_color == 'dark' else 1
-        self.player_team_dict[player_id] = team_id
-        return team_id
+            self.player_team_dict[player_id] = team_id
+            return team_id
         except Exception as e:
             # If classification fails, default to team 1
             self.player_team_dict[player_id] = 1
