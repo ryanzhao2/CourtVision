@@ -69,38 +69,6 @@ The frontend will be available at `http://localhost:5173`
    - Ball possession tracking
    - Visual overlays and status text
 
-## Files Structure
-
-```
-├── backend/
-│   ├── user.py                 # Flask API server
-│   ├── start_backend.py        # Backend startup script
-│   ├── opencv-test/
-│   │   ├── person_ball_detection.py  # Main analysis script
-│   │   ├── basketballmodel.pt        # Basketball detection model
-│   │   ├── yolov8s-pose.pt           # Pose estimation model
-│   │   └── requirements.txt          # Python dependencies
-│   └── requirements.txt
-├── frontend/
-│   ├── src/
-│   │   └── pages/
-│   │       └── WebcamAnalysisPage.tsx  # Main analysis page
-│   └── package.json
-└── README.md
-```
-
-## API Endpoints
-
-- `POST /api/launch-desktop-app` - Launches the basketball analysis desktop app
-- `POST /api/kill-desktop-app` - Terminates the running basketball analysis process
-- `GET /api/analysis-status` - Gets the current status of the analysis process
-
-## Troubleshooting
-
-- **Webcam not working**: Make sure your computer has a webcam and it's not being used by another application
-- **Models not loading**: Check that the `.pt` files are in the `backend/opencv-test/` directory
-- **Backend not starting**: Make sure port 5002 is not in use by another application
-- **Frontend not connecting**: Ensure the backend is running on `http://localhost:5002`
 
 ## Controls
 
