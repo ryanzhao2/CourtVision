@@ -36,7 +36,7 @@ const DashboardPage = () => {
       <header className="dashboard-header">
         <Link to="/" className="logo">
           <BarChart3 size={32} />
-          <span>CourtVision</span>
+          <span>Netly</span>
         </Link>
 
         <div className="header-actions">

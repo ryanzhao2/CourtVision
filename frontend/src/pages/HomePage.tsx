@@ -9,7 +9,7 @@ const HomePage: React.FC = () => {
       <header className="header">
         <Link to="/" className="logo">
           <BarChart3 size={32} />
-          <span>CourtVision</span>
+          <span>Netly</span>
         </Link>
         <nav className="nav">
           <Link to="/login" className="nav-link">
@@ -117,7 +117,7 @@ const HomePage: React.FC = () => {
           <div className="container">
             <div className="cta-content">
               <h2>Ready to Elevate Your Game?</h2>
-              <p>Join thousands of players and coaches using CourtVision to improve their basketball performance.</p>
+              <p>Join thousands of players and coaches using Netly to improve their basketball performance.</p>
               <Link to="/signup" className="btn btn-secondary btn-large">
                 Get Started Free
               </Link>
@@ -129,7 +129,7 @@ const HomePage: React.FC = () => {
       {/* Footer */}
       <footer className="footer">
         <div className="container">
-          <p>&copy; 2025 CourtVision. All rights reserved.</p>
+          <p>&copy; 2025 Netly. All rights reserved.</p>
           <nav className="footer-nav">
             <Link to="/terms">Terms of Service</Link>
             <Link to="/privacy">Privacy</Link>

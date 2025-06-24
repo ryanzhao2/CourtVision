@@ -42,7 +42,7 @@ const SignupPage: React.FC = () => {
         <div className="auth-header">
           <Link to="/" className="logo">
             <BarChart3 size={32} />
-            <span>CourtVision</span>
+            <span>Netly</span>
           </Link>
         </div>
 
