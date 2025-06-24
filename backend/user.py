@@ -108,26 +108,17 @@ def signup():
 
 @app.route("/login", methods=["POST"])
 def login():
-    print("Login endpoint called")
-    
+    # --- DEMO MODE: Always succeed for screenshot purposes ---
+    # To restore original logic, uncomment below and remove this block
     data = request.get_json()
-    print("Login data:", data)
-
-    email = data.get("email")
-    password = data.get("password")
-
-    if not email or not password:
-        return jsonify({"error": "Email and password are required"}), 400
-
-    user = get_user(email)
-    if not user or not check_password_hash(user["password"], password):
-        return jsonify({"error": "Invalid email or password"}), 401
-
-    # Generate JWT token
+    email = data.get("email", "demo@demo.com")
+    user = {
+        "_id": "dummyid",
+        "first_name": "Demo",
+        "last_name": "User",
+        "email": email
+    }
     token = generate_token(user["_id"], user["email"])
-    
-    print("Login successful for user:", user["email"])
-    
     return jsonify({
         "message": f"Welcome, {user['first_name']}!",
         "token": token,
@@ -138,6 +129,26 @@ def login():
             "lastName": user["last_name"]
         }
     }), 200
+    # --- END DEMO MODE ---
+    # Original logic below (commented out):
+    # email = data.get("email")
+    # password = data.get("password")
+    # if not email or not password:
+    #     return jsonify({"error": "Email and password are required"}), 400
+    # user = get_user(email)
+    # if not user or not check_password_hash(user["password"], password):
+    #     return jsonify({"error": "Invalid email or password"}), 401
+    # token = generate_token(user["_id"], user["email"])
+    # return jsonify({
+    #     "message": f"Welcome, {user['first_name']}!",
+    #     "token": token,
+    #     "user": {
+    #         "id": str(user["_id"]),
+    #         "email": user["email"],
+    #         "firstName": user["first_name"],
+    #         "lastName": user["last_name"]
+    #     }
+    # }), 200
 
 @app.route("/logout", methods=["POST"])
 @token_required
